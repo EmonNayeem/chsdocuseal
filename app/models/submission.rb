@@ -47,6 +47,9 @@ class Submission < ApplicationRecord
   has_many :submitters, dependent: :destroy
   has_many :submission_events, dependent: :destroy
 
+  has_many :template_departments, through: :template
+  has_many :departments, through: :template
+
   attribute :preferences, :string, default: -> { {} }
 
   serialize :template_fields, coder: JSON

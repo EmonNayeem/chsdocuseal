@@ -10,10 +10,10 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_10_115106) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
-  enable_extension "plpgsql"
+  enable_extension "pg_catalog.plpgsql"
 
   create_table "access_tokens", force: :cascade do |t|
     t.bigint "user_id", null: false
@@ -159,12 +159,21 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
     t.index ["username"], name: "index_console1984_users_on_username"
   end
 
+  create_table "departments", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "name", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "name"], name: "index_departments_on_account_id_and_name", unique: true
+    t.index ["account_id"], name: "index_departments_on_account_id"
+  end
+
   create_table "document_generation_events", force: :cascade do |t|
     t.bigint "submitter_id", null: false
     t.string "event_name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["submitter_id", "event_name"], name: "index_document_generation_events_on_submitter_id_and_event_name", unique: true, where: "((event_name)::text = ANY ((ARRAY['start'::character varying, 'complete'::character varying])::text[]))"
+    t.index ["submitter_id", "event_name"], name: "index_document_generation_events_on_submitter_id_and_event_name", unique: true, where: "((event_name)::text = ANY (ARRAY[('start'::character varying)::text, ('complete'::character varying)::text]))"
     t.index ["submitter_id"], name: "index_document_generation_events_on_submitter_id"
   end
 
@@ -181,7 +190,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
     t.datetime "created_at", null: false
     t.index ["account_id", "event_datetime"], name: "index_email_events_on_account_id_and_event_datetime"
     t.index ["email"], name: "index_email_events_on_email"
-    t.index ["email"], name: "index_email_events_on_email_event_types", where: "((event_type)::text = ANY ((ARRAY['bounce'::character varying, 'soft_bounce'::character varying, 'permanent_bounce'::character varying, 'complaint'::character varying, 'soft_complaint'::character varying])::text[]))"
+    t.index ["email"], name: "index_email_events_on_email_event_types", where: "((event_type)::text = ANY (ARRAY[('bounce'::character varying)::text, ('soft_bounce'::character varying)::text, ('permanent_bounce'::character varying)::text, ('complaint'::character varying)::text, ('soft_complaint'::character varying)::text]))"
     t.index ["emailable_type", "emailable_id"], name: "index_email_events_on_emailable"
     t.index ["message_id"], name: "index_email_events_on_message_id"
   end
@@ -225,7 +234,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
     t.string "event_name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["event_name", "key"], name: "index_lock_events_on_event_name_and_key", unique: true, where: "((event_name)::text = ANY ((ARRAY['start'::character varying, 'complete'::character varying])::text[]))"
+    t.index ["event_name", "key"], name: "index_lock_events_on_event_name_and_key", unique: true, where: "((event_name)::text = ANY (ARRAY[('start'::character varying)::text, ('complete'::character varying)::text]))"
     t.index ["key"], name: "index_lock_events_on_key"
   end
 
@@ -297,7 +306,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.bigint "account_id"
-    t.index ["account_id", "created_at"], name: "index_submissions_events_on_sms_event_types", where: "((event_type)::text = ANY ((ARRAY['send_sms'::character varying, 'send_2fa_sms'::character varying])::text[]))"
+    t.index ["account_id", "created_at"], name: "index_submissions_events_on_sms_event_types", where: "((event_type)::text = ANY (ARRAY[('send_sms'::character varying)::text, ('send_2fa_sms'::character varying)::text]))"
     t.index ["account_id"], name: "index_submission_events_on_account_id"
     t.index ["created_at"], name: "index_submission_events_on_created_at"
     t.index ["submission_id"], name: "index_submission_events_on_submission_id"
@@ -367,6 +376,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
     t.index ["template_id", "user_id"], name: "index_template_accesses_on_template_id_and_user_id", unique: true
   end
 
+  create_table "template_departments", force: :cascade do |t|
+    t.bigint "template_id", null: false
+    t.bigint "department_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["department_id", "template_id"], name: "index_template_departments_on_department_id_and_template_id"
+    t.index ["template_id", "department_id"], name: "index_template_departments_on_template_id_and_department_id", unique: true
+  end
+
   create_table "template_folders", force: :cascade do |t|
     t.string "name", null: false
     t.bigint "author_id", null: false
@@ -424,6 +442,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
     t.datetime "updated_at", null: false
     t.index ["user_id", "key"], name: "index_user_configs_on_user_id_and_key", unique: true
     t.index ["user_id"], name: "index_user_configs_on_user_id"
+  end
+
+  create_table "user_departments", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "department_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["department_id", "user_id"], name: "index_user_departments_on_department_id_and_user_id"
+    t.index ["user_id", "department_id"], name: "index_user_departments_on_user_id_and_department_id", unique: true
   end
 
   create_table "users", force: :cascade do |t|
@@ -506,6 +533,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
   add_foreign_key "account_linked_accounts", "accounts", column: "linked_account_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "departments", "accounts"
   add_foreign_key "document_generation_events", "submitters"
   add_foreign_key "email_events", "accounts"
   add_foreign_key "email_messages", "accounts"
@@ -523,6 +551,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
   add_foreign_key "submissions", "users", column: "created_by_user_id"
   add_foreign_key "submitters", "submissions"
   add_foreign_key "template_accesses", "templates"
+  add_foreign_key "template_departments", "departments", on_delete: :cascade
+  add_foreign_key "template_departments", "templates", on_delete: :cascade
   add_foreign_key "template_folders", "accounts"
   add_foreign_key "template_folders", "template_folders", column: "parent_folder_id"
   add_foreign_key "template_folders", "users", column: "author_id"
@@ -531,6 +561,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_11_25_194305) do
   add_foreign_key "templates", "template_folders", column: "folder_id"
   add_foreign_key "templates", "users", column: "author_id"
   add_foreign_key "user_configs", "users"
+  add_foreign_key "user_departments", "departments", on_delete: :cascade
+  add_foreign_key "user_departments", "users", on_delete: :cascade
   add_foreign_key "users", "accounts"
   add_foreign_key "webhook_urls", "accounts"
 end

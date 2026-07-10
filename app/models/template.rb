@@ -70,6 +70,8 @@ class Template < ApplicationRecord
   has_many :submissions, dependent: :destroy
   has_many :template_sharings, dependent: :destroy
   has_many :template_accesses, dependent: :destroy
+  has_many :template_departments, dependent: :destroy
+  has_many :departments, through: :template_departments
 
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }

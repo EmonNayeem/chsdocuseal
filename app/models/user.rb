@@ -67,6 +67,8 @@ class User < ApplicationRecord
   has_many :user_configs, dependent: :destroy
   has_many :encrypted_configs, dependent: :destroy, class_name: 'EncryptedUserConfig'
   has_many :email_messages, dependent: :destroy, foreign_key: :author_id, inverse_of: :author
+  has_many :user_departments, dependent: :destroy
+  has_many :departments, through: :user_departments
 
   devise :two_factor_authenticatable, :recoverable, :rememberable, :validatable, :trackable, :lockable
 
@@ -119,5 +121,9 @@ class User < ApplicationRecord
     else
       email
     end
+  end
+
+  def department_acl_admin?
+    role == ADMIN_ROLE
   end
 end
