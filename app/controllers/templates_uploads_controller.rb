@@ -48,7 +48,10 @@ class TemplatesUploadsController < ApplicationController
 
     Templates.maybe_assign_access(template)
 
-    template.save!
+    Template.transaction do
+      template.save!
+      template.department_ids = upload_template_department_ids
+    end
 
     template
   end
@@ -70,4 +73,10 @@ class TemplatesUploadsController < ApplicationController
 
     { files: [file] }
   end
+
+  def upload_template_department_ids
+    return [] if current_user.department_acl_admin?
+
+    current_user.department_ids
+  end    
 end

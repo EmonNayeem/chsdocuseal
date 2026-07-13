@@ -32,6 +32,8 @@ class TemplatesCloneController < ApplicationController
     Templates.maybe_assign_access(@template)
 
     if @template.save
+      @template.department_ids = clone_template_department_ids(@base_template, @template)
+
       Templates::CloneAttachments.call(template: @template, original_template: @base_template)
 
       SearchEntries.enqueue_reindex(@template)
@@ -45,6 +47,12 @@ class TemplatesCloneController < ApplicationController
   end
 
   private
+
+  def clone_template_department_ids(base_template, cloned_template)
+    return [] if base_template.account_id != cloned_template.account_id
+
+    base_template.department_ids
+  end
 
   def maybe_redirect_to_template(template)
     if template.account == current_account
