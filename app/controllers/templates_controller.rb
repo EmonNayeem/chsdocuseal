@@ -62,6 +62,8 @@ class TemplatesController < ApplicationController
 
     Templates.maybe_assign_access(@template)
 
+    assign_create_preferences(@template)
+
     department_ids = template_create_department_ids(params.dig(:template, :department_ids))
 
     Template.transaction do
@@ -107,6 +109,16 @@ class TemplatesController < ApplicationController
   end
 
   private
+
+  def assign_create_preferences(template)
+    return unless params.dig(:template, :preferences).present?
+
+    confidential_access = params.dig(:template, :preferences, :confidential_access)
+
+    template.preferences = template.preferences.merge(
+      'confidential_access' => confidential_access == 'true'
+    )
+  end
 
   def template_params
     params.require(:template).permit(

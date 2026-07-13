@@ -56,6 +56,23 @@
     </div>
   <% end %>
 
+  <div class="mt-4 mb-4 flex items-center justify-between border border-base-300 rounded-xl px-4 py-3">
+    <span>
+      Confidential / invite only
+      <span class="block text-sm opacity-70">
+        Only emails already added as recipients can open the public link.
+      </span>
+    </span>
+
+    <div class="flex">
+      <%= hidden_field_tag 'template[preferences][confidential_access]', 'false' %>
+      <%= check_box_tag 'template[preferences][confidential_access]',
+                        'true',
+                        false,
+                        class: 'toggle' %>
+    </div>
+  </div>
+  
   <div class="form-control">
     <%= f.button button_title(title: t('create'), disabled_with: t('creating')), class: 'base-button' %>
   </div>
