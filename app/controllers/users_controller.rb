@@ -4,6 +4,7 @@ class UsersController < ApplicationController
   load_and_authorize_resource :user, only: %i[index edit update destroy]
 
   before_action :build_user, only: %i[new create]
+  before_action :load_departments, only: %i[new edit create update]
   authorize_resource :user, only: %i[new create]
 
   def index
@@ -43,8 +44,9 @@ class UsersController < ApplicationController
     @user.role = User::ADMIN_ROLE unless role_valid?(@user.role)
 
     if @user.save
-      UserMailer.invitation_email(@user).deliver_later!
+      assign_user_departments(@user)
 
+      UserMailer.invitation_email(@user).deliver_later!
       redirect_back fallback_location: settings_users_path, notice: I18n.t('user_has_been_invited')
     else
       render turbo_stream: turbo_stream.replace(:modal, template: 'users/new'), status: :unprocessable_content
@@ -66,6 +68,7 @@ class UsersController < ApplicationController
     end
 
     if @user.update(attrs.except(*(current_user == @user ? %i[password otp_required_for_login role] : %i[password])))
+      assign_user_departments(@user)
       if @user.try(:pending_reconfirmation?) && @user.previous_changes.key?(:unconfirmed_email)
         SendConfirmationInstructionsJob.perform_async('user_id' => @user.id)
 
@@ -109,5 +112,22 @@ class UsersController < ApplicationController
     else
       {}
     end
+  end
+    
+
+  def load_departments
+    @available_departments = current_account.departments.order(:name)
+  end
+
+  def assign_user_departments(user)
+    return unless current_user.department_acl_admin?
+    return unless params.key?(:user)
+    return unless params[:user].key?(:department_ids)
+
+    department_ids = current_account.departments
+                                    .where(id: Array(params.dig(:user, :department_ids)).reject(&:blank?))
+                                    .pluck(:id)
+
+    user.department_ids = department_ids
   end
 end

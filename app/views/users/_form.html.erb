@@ -39,6 +39,32 @@
       <% end %>
       <%= render 'role_select', f: %>
     <% end %>
+
+    <% if can?(:manage, Department) && @available_departments.present? %>
+      <div>
+        <label class="label">Departments</label>
+
+        <%= hidden_field_tag 'user[department_ids][]', '' %>
+
+        <div class="space-y-2">
+          <% @available_departments.each do |department| %>
+            <label class="flex items-center gap-2">
+              <%= check_box_tag 'user[department_ids][]',
+                                department.id,
+                                user.department_ids.include?(department.id),
+                                class: 'checkbox checkbox-sm' %>
+
+              <span><%= department.name %></span>
+            </label>
+          <% end %>
+        </div>
+      </div>
+    <% elsif can?(:manage, Department) %>
+      <div class="alert">
+        Create departments first, then assign users to them.
+      </div>
+    <% end %>
+
     <% if local_assigns[:extra_fields_html].present? %>
       <%= local_assigns[:extra_fields_html] %>
     <% end %>
