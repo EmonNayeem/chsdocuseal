@@ -1,0 +1,19 @@
+<%= form_for @department,
+             url: @department.persisted? ? settings_department_path(@department) : settings_departments_path,
+             html: { class: 'space-y-4' },
+             data: { turbo_frame: :_top } do |f| %>
+
+  <% if @department.errors.any? %>
+    <div class="alert alert-error">
+      <%= @department.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div>
+    <%= f.label :name, 'Department name', class: 'label' %>
+    <%= f.text_field :name, required: true, class: 'base-input w-full', placeholder: 'ICT' %>
+  </div>
+
+  <%= f.button @department.persisted? ? 'Update Department' : 'Create Department',
+               class: 'base-button' %>
+<% end %>

@@ -1,0 +1,56 @@
+<%= render 'shared/settings_nav' %>
+
+<div class="max-w-5xl mx-auto px-4">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-semibold">Departments</h1>
+
+    <%= link_to 'New Department',
+                new_settings_department_path,
+                class: 'btn btn-primary',
+                data: { turbo_frame: 'modal' } %>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="table w-full">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Users</th>
+          <th>Templates</th>
+          <th></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <% @departments.each do |department| %>
+          <tr>
+            <td><%= department.name %></td>
+            <td><%= department.users.size %></td>
+            <td><%= department.templates.size %></td>
+            <td class="text-right">
+              <%= link_to 'Edit',
+                          edit_settings_department_path(department),
+                          class: 'btn btn-outline btn-xs',
+                          data: { turbo_frame: 'modal' } %>
+
+              <%= button_to 'Delete',
+                            settings_department_path(department),
+                            method: :delete,
+                            class: 'btn btn-outline btn-error btn-xs',
+                            form: { class: 'inline-block' },
+                            data: { turbo_confirm: 'Are you sure?' } %>
+            </td>
+          </tr>
+        <% end %>
+
+        <% if @departments.blank? %>
+          <tr>
+            <td colspan="4" class="text-center opacity-70">
+              No departments yet.
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
