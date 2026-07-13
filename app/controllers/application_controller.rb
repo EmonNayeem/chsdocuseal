@@ -33,13 +33,7 @@ class ApplicationController < ActionController::Base
     redirect_to request.referer, alert: 'Too many requests', status: :too_many_requests
   end
 
-  if Rails.env.production? || Rails.env.test?
-    rescue_from CanCan::AccessDenied do |e|
-      Rollbar.warning(e) if defined?(Rollbar)
-
-      redirect_to root_path, alert: e.message
-    end
-  end
+  rescue_from CanCan::AccessDenied, with: :handle_access_denied
 
   def default_url_options
     if request.domain == 'docuseal.com'
@@ -67,6 +61,16 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  def handle_access_denied(error)
+    Rollbar.warning(error) if defined?(Rollbar)
+
+    respond_to do |format|
+      format.html { redirect_to root_path, alert: I18n.t('access_denied', default: 'You do not have access to this item.') }
+      format.json { render json: { error: 'Access denied' }, status: :forbidden }
+      format.any { head :forbidden }
+    end
+  end
 
   def with_locale(&)
     return yield unless current_account
