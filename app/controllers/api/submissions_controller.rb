@@ -54,6 +54,8 @@ module Api
 
       return render json: { error: 'Template not found' }, status: :unprocessable_content if @template.nil?
 
+      authorize! :read, @template
+
       if @template.fields.blank?
         Rollbar.warning("Template does not contain fields: #{@template.id}") if defined?(Rollbar)
 
