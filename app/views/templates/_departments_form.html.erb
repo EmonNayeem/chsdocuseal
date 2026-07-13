@@ -1,0 +1,48 @@
+<% available_departments =
+     if current_user.department_acl_admin?
+       current_account.departments.order(:name)
+     else
+       current_user.departments.order(:name)
+     end %>
+
+<% if can?(:update, template) %>
+  <div class="mb-6">
+    <h3 class="text-lg font-semibold mb-2">Departments</h3>
+
+    <% if available_departments.present? %>
+      <%= form_for template,
+                   url: template_departments_path(template),
+                   method: :patch,
+                   html: { autocomplete: 'off', class: 'space-y-3' },
+                   data: { turbo_frame: :_top } do |f| %>
+
+        <%= hidden_field_tag 'template[department_ids][]', '' %>
+
+        <div class="space-y-2">
+          <% available_departments.each do |department| %>
+            <label class="flex items-center gap-2">
+              <%= check_box_tag 'template[department_ids][]',
+                                department.id,
+                                template.department_ids.include?(department.id),
+                                class: 'checkbox checkbox-sm' %>
+
+              <span><%= department.name %></span>
+            </label>
+          <% end %>
+        </div>
+
+        <% if current_user.department_acl_admin? %>
+          <p class="text-sm opacity-70">
+            Leaving all departments unchecked makes this template admin-only once department access control is enforced.
+          </p>
+        <% end %>
+
+        <%= f.button 'Save Departments', class: 'base-button' %>
+      <% end %>
+    <% else %>
+      <div class="alert">
+        No departments are available.
+      </div>
+    <% end %>
+  </div>
+<% end %>

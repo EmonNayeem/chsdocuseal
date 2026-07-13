@@ -3,6 +3,18 @@
 class TemplatesController < ApplicationController
   load_and_authorize_resource :template
 
+  def template_create_department_ids(raw_ids)
+    submitted_ids = Array(raw_ids).reject(&:blank?)
+
+    if current_user.department_acl_admin?
+      current_account.departments.where(id: submitted_ids).pluck(:id)
+    elsif submitted_ids.present?
+      current_user.departments.where(id: submitted_ids).pluck(:id)
+    else
+      current_user.department_ids
+    end
+  end
+
   def show
     submissions = @template.submissions.accessible_by(current_ability)
     submissions = submissions.active if @template.archived_at.blank?
@@ -50,15 +62,19 @@ class TemplatesController < ApplicationController
 
     Templates.maybe_assign_access(@template)
 
-    if @template.save
-      SearchEntries.enqueue_reindex(@template)
+    department_ids = template_create_department_ids(params.dig(:template, :department_ids))
 
-      WebhookUrls.enqueue_events(@template, 'template.created')
-
-      redirect_to(edit_template_path(@template))
-    else
-      render turbo_stream: turbo_stream.replace(:modal, template: 'templates/new'), status: :unprocessable_content
+    Template.transaction do
+      @template.save!
+      @template.department_ids = department_ids
     end
+
+    SearchEntries.enqueue_reindex(@template)
+    WebhookUrls.enqueue_events(@template, 'template.created')
+
+    redirect_to(edit_template_path(@template))
+  rescue ActiveRecord::RecordInvalid
+    render turbo_stream: turbo_stream.replace(:modal, template: 'templates/new'), status: :unprocessable_content
   end
 
   def update

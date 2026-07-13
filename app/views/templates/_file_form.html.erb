@@ -17,6 +17,45 @@
       </set-value>
     </folder-autocomplete>
   </div>
+
+  <% available_departments =
+     if current_user.department_acl_admin?
+       current_account.departments.order(:name)
+     else
+       current_user.departments.order(:name)
+     end %>
+
+  <% if available_departments.present? %>
+    <div class="mt-4">
+      <label class="label">Departments</label>
+
+      <%= hidden_field_tag 'template[department_ids][]', '' %>
+
+      <div class="space-y-2">
+        <% available_departments.each do |department| %>
+          <label class="flex items-center gap-2">
+            <%= check_box_tag 'template[department_ids][]',
+                              department.id,
+                              !current_user.department_acl_admin?,
+                              class: 'checkbox checkbox-sm' %>
+
+            <span><%= department.name %></span>
+          </label>
+        <% end %>
+      </div>
+
+      <% if current_user.department_acl_admin? %>
+        <p class="text-sm opacity-70 mt-1">
+          Leaving all departments unchecked makes this template admin-only once department access control is enforced.
+        </p>
+      <% end %>
+    </div>
+  <% elsif !current_user.department_acl_admin? %>
+    <div class="alert alert-warning mt-4">
+      Ask an admin to assign you to a department before creating templates.
+    </div>
+  <% end %>
+
   <div class="form-control">
     <%= f.button button_title(title: t('create'), disabled_with: t('creating')), class: 'base-button' %>
   </div>
