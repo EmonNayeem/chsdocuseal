@@ -57,19 +57,21 @@
           <% end %>
 
           <%= form_for template,
-                       url: template_preferences_path(template),
-                       method: :post,
-                       html: { autocomplete: 'off', class: 'hidden md:flex items-center' },
-                       data: { close_on_submit: false } do |f| %>
+                      url: template_preferences_path(template),
+                      method: :post,
+                      html: { autocomplete: 'off', class: 'hidden md:flex items-center' },
+                      data: { close_on_submit: false } do %>
             <%= hidden_field_tag 'template[preferences][confidential_access]', 'false' %>
 
             <label class="btn btn-outline btn-sm gap-2 normal-case">
               <span>Confidential</span>
-              <%= check_box_tag 'template[preferences][confidential_access]',
-                                'true',
-                                template.preferences['confidential_access'] == true,
-                                class: 'toggle toggle-sm',
-                                onchange: 'this.form.requestSubmit()' %>
+
+              <submit-form data-on="change" class="flex">
+                <%= check_box_tag 'template[preferences][confidential_access]',
+                                  'true',
+                                  template.preferences['confidential_access'] == true,
+                                  class: 'toggle toggle-sm' %>
+              </submit-form>
             </label>
           <% end %>
         <% end %>
