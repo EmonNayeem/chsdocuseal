@@ -36,7 +36,20 @@ class StartFormController < ApplicationController
   end
 
   def update
-    @submitter = find_or_initialize_submitter(@template, submitter_params)
+    submitted_params = submitter_params
+
+    @submitter =
+      if @template.preferences['confidential_access'] == true
+        find_confidential_submitter(@template, submitted_params)
+      else
+        find_or_initialize_submitter(@template, submitted_params)
+      end
+
+    if @submitter.new_record? && @template.preferences['confidential_access'] == true
+      @error_message = 'You are not authorized to access this form.'
+
+      return render :show, status: :unprocessable_content
+    end
 
     if @submitter.completed_at?
       redirect_to start_form_completed_path(@template.slug, submitter_params.compact_blank)
@@ -144,6 +157,35 @@ class StartFormController < ApplicationController
       end
     end
 
+    submitter
+  end
+
+  def find_confidential_submitter(template, submitter_params)
+    required_fields = template.preferences.fetch('link_form_fields', ['email'])
+
+    required_params = required_fields.index_with { |key| submitter_params[key] }
+    find_params = required_params.except('name')
+
+    submitter = Submitter.new
+
+    required_params.each do |key, value|
+      submitter.errors.add(key.to_sym, :blank) if value.blank?
+    end
+
+    return submitter if find_params.compact_blank.blank? || submitter.errors.present?
+
+    existing_submitter =
+      Submitter
+      .where(submission: template.submissions.where(expire_at: Time.current..)
+                                .or(template.submissions.where(expire_at: nil)).where(archived_at: nil))
+      .order(id: :desc)
+      .where(declined_at: nil)
+      .where(external_id: nil)
+      .find_by(find_params)
+
+    return existing_submitter if existing_submitter
+
+    submitter.errors.add(:email, 'is not authorized to access this form')
     submitter
   end
 
