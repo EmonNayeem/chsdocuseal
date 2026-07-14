@@ -122,6 +122,12 @@ class UsersController < ApplicationController
   def assign_user_departments(user)
     return unless current_user.department_acl_admin?
     return unless params.key?(:user)
+
+    if user.department_acl_admin?
+      user.department_ids = []
+      return
+    end
+
     return unless params[:user].key?(:department_ids)
 
     department_ids = current_account.departments

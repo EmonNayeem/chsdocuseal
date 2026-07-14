@@ -220,3 +220,47 @@ safeRegisterElement('import-list', class extends HTMLElement {
     this.appElem?.remove()
   }
 })
+
+const updateUserDepartmentState = (roleSelect) => {
+  const form = roleSelect.closest('form')
+
+  if (!form) return
+
+  const wrapper = form.querySelector('[data-user-departments-wrapper]')
+  const checkboxes = form.querySelectorAll('[data-user-department-checkbox]')
+  const adminMessage = form.querySelector('[data-admin-departments-message]')
+
+  if (!wrapper || checkboxes.length === 0) return
+
+  const isAdmin = roleSelect.value === 'admin'
+
+  wrapper.classList.toggle('opacity-50', isAdmin)
+  
+  if (adminMessage) {
+    adminMessage.classList.toggle('hidden', !isAdmin)
+  }
+
+  checkboxes.forEach((checkbox) => {
+    checkbox.disabled = isAdmin
+
+    if (isAdmin) {
+      checkbox.checked = false
+    }
+  })
+}
+
+document.addEventListener('change', (event) => {
+  const roleSelect = event.target.closest('[data-user-role-select]')
+
+  if (!roleSelect) return
+
+  updateUserDepartmentState(roleSelect)
+})
+
+document.addEventListener('turbo:load', () => {
+  document.querySelectorAll('[data-user-role-select]').forEach(updateUserDepartmentState)
+})
+
+document.addEventListener('turbo:frame-load', () => {
+  document.querySelectorAll('[data-user-role-select]').forEach(updateUserDepartmentState)
+})

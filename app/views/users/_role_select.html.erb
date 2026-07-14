@@ -4,5 +4,6 @@
   <%= f.select :role,
                User::ROLES.map { |role| [t(role, default: role.titleize), role] },
                { include_blank: false },
-               class: 'base-select' %>
+               class: 'base-select',
+               data: { user_role_select: true } %>
 </div>
