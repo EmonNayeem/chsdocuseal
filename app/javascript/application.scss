@@ -48,11 +48,11 @@ button[disabled] .enabled, button.btn-disabled .enabled {
 }
 
 .base-input {
-  @apply input input-bordered bg-white;
+  @apply input input-bordered bg-base-100 text-base-content;
 }
 
 .base-textarea {
-  @apply textarea textarea-bordered bg-white rounded-3xl;
+  @apply textarea textarea-bordered bg-base-100 text-base-content rounded-3xl;
 }
 
 .base-button {
@@ -60,15 +60,15 @@ button[disabled] .enabled, button.btn-disabled .enabled {
 }
 
 .white-button {
-  @apply btn btn-outline text-base bg-white border-2;
+  @apply btn btn-outline text-base bg-base-100 text-base-content border-2;
 }
 
 .base-checkbox {
-  @apply checkbox rounded bg-white checkbox-sm no-animation;
+  @apply checkbox rounded bg-base-100 checkbox-sm no-animation;
 }
 
 .base-radio {
-  @apply radio bg-white radio-sm no-animation;
+  @apply radio bg-base-100 radio-sm no-animation;
 }
 
 .base-select {
@@ -115,7 +115,7 @@ button[disabled] .enabled, button.btn-disabled .enabled {
 }
 
 .autocomplete {
-  background: white;
+  background: hsl(var(--b1));
   z-index: 1000;
   font: 16px/25px "-apple-system", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   overflow: auto;
@@ -132,7 +132,7 @@ button[disabled] .enabled, button.btn-disabled .enabled {
 }
 
 .autocomplete .group {
-  background: #eee;
+  background: hsl(var(--b2));
 }
 
 .autocomplete > div:hover:not(.group),
@@ -163,7 +163,6 @@ template-builder.chs-template-builder-page {
   background-color: #F7FAFC !important;
 }
 
-/* Main editor layout */
 template-builder.chs-template-builder-page > div,
 template-builder.chs-template-builder-page [data-v-app],
 template-builder.chs-template-builder-page .main-container,
@@ -174,85 +173,162 @@ template-builder.chs-template-builder-page #fields_list_container {
   background-color: #F7FAFC !important;
 }
 
-/* Top editor header */
 template-builder.chs-template-builder-page #title_container {
   background-color: #FFFFFF !important;
   border-bottom: 1px solid #DCE8F1;
 }
 
-/* Left document preview panel */
-template-builder.chs-template-builder-page #documents_container {
-  border-right: 1px solid #DCE8F1;
-}
-
-template-builder.chs-template-builder-page #documents_container .sticky,
-template-builder.chs-template-builder-page #documents_container .document-control-button,
-template-builder.chs-template-builder-page #documents_container .replace-document-button {
-  background-color: #F7FAFC !important;
-}
-
-/* Right field panel */
-template-builder.chs-template-builder-page #fields_list_container {
-  border-left: 1px solid #DCE8F1;
-}
-
-/* Cards, fields, field buttons */
 template-builder.chs-template-builder-page .fields-list-item,
-template-builder.chs-template-builder-page .fields-grid-item,
+template-builder.chs-template-builder-page .draw-field-container,
 template-builder.chs-template-builder-page .field-type-button,
-template-builder.chs-template-builder-page .default-field,
-template-builder.chs-template-builder-page .draw-field-container {
+template-builder.chs-template-builder-page .default-field {
   background-color: #FFFFFF !important;
   border-color: #DCE8F1 !important;
 }
 
-/* Inputs inside the editor field list */
-template-builder.chs-template-builder-page input,
-template-builder.chs-template-builder-page select,
-template-builder.chs-template-builder-page textarea {
-  background-color: #FFFFFF !important;
+/* Dark mode for template editor */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page {
+  background-color: #0E263A !important;
+  color: #F2FAFE !important;
 }
 
-/* Submitter dropdown menu */
-template-builder.chs-template-builder-page .dropdown-content,
-template-builder.chs-template-builder-page .menu {
-  background-color: #FFFFFF !important;
-  border-color: #DCE8F1 !important;
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page > div,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page [data-v-app],
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .main-container,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #main_container,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #documents_container,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #fields_list_container {
+  background-color: #0E263A !important;
+  color: #F2FAFE !important;
 }
 
-/* Selected submitter / active row */
-template-builder.chs-template-builder-page .bg-base-300 {
-  background-color: #E6F3FA !important;
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #title_container {
+  background-color: #0B263A !important;
+  border-bottom: 1px solid #1F4E79;
+  color: #F2FAFE !important;
 }
 
-template-builder.chs-template-builder-page .btn-neutral,
-template-builder.chs-template-builder-page .base-button {
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .fields-list-item,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .draw-field-container,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .field-type-button,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .default-field,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page input,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page select,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page textarea {
+  background-color: #12324A !important;
+  border-color: #1F4E79 !important;
+  color: #F2FAFE !important;
+}
+
+/* Keep actual document/page surface readable */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page canvas,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #documents_container img,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container img {
+  background-color: #FFFFFF;
+}
+
+/* Dark mode buttons inside editor */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .btn-neutral,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .base-button {
   background-color: #1F4E79 !important;
   border-color: #1F4E79 !important;
   color: #FFFFFF !important;
 }
 
-/* Keep PDF/document page itself white */
-template-builder.chs-template-builder-page canvas,
-template-builder.chs-template-builder-page img {
-  background-color: #FFFFFF;
-}
-
-/* Scrollbar styling for editor panels */
-template-builder.chs-template-builder-page *::-webkit-scrollbar {
+/* Dark mode scrollbar inside editor */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-template-builder.chs-template-builder-page *::-webkit-scrollbar-track {
-  background: #F7FAFC;
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page *::-webkit-scrollbar-track {
+  background: #0E263A;
 }
 
-template-builder.chs-template-builder-page *::-webkit-scrollbar-thumb {
-  background: #BFD7E8;
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page *::-webkit-scrollbar-thumb {
+  background: #1F4E79;
   border-radius: 999px;
 }
 
-template-builder.chs-template-builder-page *::-webkit-scrollbar-thumb:hover {
-  background: #8DBBD8;
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page *::-webkit-scrollbar-thumb:hover {
+  background: #1FA9E5;
+}
+
+/* Dark mode: keep placed fields visible on white document pages */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .field-area,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .field-area *,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page [class*="field-area"],
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page [class*="field-area"] * {
+  color: #12324A !important;
+}
+
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .field-area,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page [class*="field-area"] {
+  background-color: rgba(31, 78, 121, 0.18) !important;
+  border-color: rgba(31, 78, 121, 0.65) !important;
+}
+
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .field-area svg,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page [class*="field-area"] svg {
+  color: #12324A !important;
+  stroke: #12324A !important;
+  fill: none;
+}
+
+/* Handles/dots on placed fields */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .field-area [class*="handle"],
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .field-area [class*="resize"],
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page [class*="field-area"] [class*="handle"],
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page [class*="field-area"] [class*="resize"] {
+  background-color: #FFFFFF !important;
+  border-color: #1F4E79 !important;
+}
+
+/* Dropdown / type selector shown on a selected PDF field */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .dropdown-content,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .dropdown-content *,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .menu,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .menu * {
+  color: #12324A !important;
+}
+
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .dropdown-content,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .menu {
+  background-color: #FFFFFF !important;
+  border-color: #DCE8F1 !important;
+}
+
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .dropdown-content .active,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .dropdown-content .bg-neutral,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .dropdown-content .btn-neutral,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page .dropdown-content [class*="bg-neutral"] {
+  background-color: #1F4E79 !important;
+  color: #FFFFFF !important;
+}
+
+/* Dark mode: selected PDF field header chip only */
+
+/* Selected field chip itself, scoped only to the PDF/pages area */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge-outline {
+  background-color: #E6F3FA !important;
+  border-color: #75C7E8 !important;
+  color: #12324A !important;
+}
+
+/* Text and icons inside the selected field chip */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge *,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge-outline * {
+  color: #12324A !important;
+  stroke: #12324A !important;
+}
+
+/* X button inside the selected field chip */
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge button,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge button *,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge-outline button,
+html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_container .badge-outline button * {
+  color: #12324A !important;
+  stroke: #12324A !important;
 }

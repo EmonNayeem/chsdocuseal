@@ -150,12 +150,16 @@ safeRegisterElement('template-builder', class extends HTMLElement {
     document.addEventListener('turbo:submit-end', this.onSubmit)
 
     this.appElem = document.createElement('div')
-
     this.appElem.classList.add('md:h-screen')
+
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'chs-dark'
+    const backgroundColor = (isDarkTheme && this.dataset.darkBackgroundColor)
+      ? this.dataset.darkBackgroundColor
+      : this.dataset.backgroundColor
 
     this.app = createApp(TemplateBuilder, {
       template: reactive(JSON.parse(this.dataset.template)),
-      backgroundColor: '#F7FAFC',
+      backgroundColor,
       locale: this.dataset.locale,
       withPhone: this.dataset.withPhone === 'true',
       withVerification: ['true', 'false'].includes(this.dataset.withVerification) ? this.dataset.withVerification === 'true' : null,
