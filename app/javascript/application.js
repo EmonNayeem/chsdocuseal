@@ -155,7 +155,7 @@ safeRegisterElement('template-builder', class extends HTMLElement {
 
     this.app = createApp(TemplateBuilder, {
       template: reactive(JSON.parse(this.dataset.template)),
-      backgroundColor: '#faf7f5',
+      backgroundColor: '#F7FAFC',
       locale: this.dataset.locale,
       withPhone: this.dataset.withPhone === 'true',
       withVerification: ['true', 'false'].includes(this.dataset.withVerification) ? this.dataset.withVerification === 'true' : null,
@@ -264,3 +264,35 @@ document.addEventListener('turbo:load', () => {
 document.addEventListener('turbo:frame-load', () => {
   document.querySelectorAll('[data-user-role-select]').forEach(updateUserDepartmentState)
 })
+
+const applyChsTheme = (theme) => {
+  document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('chs-docuseal-theme', theme)
+
+  document.querySelectorAll('[data-theme-toggle-icon]').forEach((icon) => {
+    icon.textContent = theme === 'chs-dark' ? '☀️' : '🌙'
+  })
+}
+
+const initializeChsThemeToggle = () => {
+  const savedTheme = localStorage.getItem('chs-docuseal-theme') || 'chs'
+
+  applyChsTheme(savedTheme)
+
+  document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+    if (button.dataset.themeToggleReady === 'true') return
+
+    button.dataset.themeToggleReady = 'true'
+
+    button.addEventListener('click', () => {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'chs'
+      const nextTheme = currentTheme === 'chs-dark' ? 'chs' : 'chs-dark'
+
+      applyChsTheme(nextTheme)
+    })
+  })
+}
+
+document.addEventListener('turbo:load', initializeChsThemeToggle)
+document.addEventListener('turbo:frame-load', initializeChsThemeToggle)
+document.addEventListener('DOMContentLoaded', initializeChsThemeToggle)

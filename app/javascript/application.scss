@@ -155,3 +155,104 @@ button[disabled] .enabled, button.btn-disabled .enabled {
 .font-courier {
   font-family: "Courier New", Consolas, "Liberation Mono", monospace, ui-monospace, SFMono-Regular, Menlo, Monaco;
 }
+
+/* CHS DocuSeal template editor branding */
+template-builder.chs-template-builder-page {
+  display: block;
+  min-height: 100vh;
+  background-color: #F7FAFC !important;
+}
+
+/* Main editor layout */
+template-builder.chs-template-builder-page > div,
+template-builder.chs-template-builder-page [data-v-app],
+template-builder.chs-template-builder-page .main-container,
+template-builder.chs-template-builder-page #main_container,
+template-builder.chs-template-builder-page #pages_container,
+template-builder.chs-template-builder-page #documents_container,
+template-builder.chs-template-builder-page #fields_list_container {
+  background-color: #F7FAFC !important;
+}
+
+/* Top editor header */
+template-builder.chs-template-builder-page #title_container {
+  background-color: #FFFFFF !important;
+  border-bottom: 1px solid #DCE8F1;
+}
+
+/* Left document preview panel */
+template-builder.chs-template-builder-page #documents_container {
+  border-right: 1px solid #DCE8F1;
+}
+
+template-builder.chs-template-builder-page #documents_container .sticky,
+template-builder.chs-template-builder-page #documents_container .document-control-button,
+template-builder.chs-template-builder-page #documents_container .replace-document-button {
+  background-color: #F7FAFC !important;
+}
+
+/* Right field panel */
+template-builder.chs-template-builder-page #fields_list_container {
+  border-left: 1px solid #DCE8F1;
+}
+
+/* Cards, fields, field buttons */
+template-builder.chs-template-builder-page .fields-list-item,
+template-builder.chs-template-builder-page .fields-grid-item,
+template-builder.chs-template-builder-page .field-type-button,
+template-builder.chs-template-builder-page .default-field,
+template-builder.chs-template-builder-page .draw-field-container {
+  background-color: #FFFFFF !important;
+  border-color: #DCE8F1 !important;
+}
+
+/* Inputs inside the editor field list */
+template-builder.chs-template-builder-page input,
+template-builder.chs-template-builder-page select,
+template-builder.chs-template-builder-page textarea {
+  background-color: #FFFFFF !important;
+}
+
+/* Submitter dropdown menu */
+template-builder.chs-template-builder-page .dropdown-content,
+template-builder.chs-template-builder-page .menu {
+  background-color: #FFFFFF !important;
+  border-color: #DCE8F1 !important;
+}
+
+/* Selected submitter / active row */
+template-builder.chs-template-builder-page .bg-base-300 {
+  background-color: #E6F3FA !important;
+}
+
+template-builder.chs-template-builder-page .btn-neutral,
+template-builder.chs-template-builder-page .base-button {
+  background-color: #1F4E79 !important;
+  border-color: #1F4E79 !important;
+  color: #FFFFFF !important;
+}
+
+/* Keep PDF/document page itself white */
+template-builder.chs-template-builder-page canvas,
+template-builder.chs-template-builder-page img {
+  background-color: #FFFFFF;
+}
+
+/* Scrollbar styling for editor panels */
+template-builder.chs-template-builder-page *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+template-builder.chs-template-builder-page *::-webkit-scrollbar-track {
+  background: #F7FAFC;
+}
+
+template-builder.chs-template-builder-page *::-webkit-scrollbar-thumb {
+  background: #BFD7E8;
+  border-radius: 999px;
+}
+
+template-builder.chs-template-builder-page *::-webkit-scrollbar-thumb:hover {
+  background: #8DBBD8;
+}

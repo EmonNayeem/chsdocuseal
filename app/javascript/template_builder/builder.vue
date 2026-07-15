@@ -1,7 +1,7 @@
 <template>
   <div
     ref="dragContainer"
-    style="max-width: 1600px"
+    :style="{ maxWidth: '1600px', backgroundColor }"
     class="mx-auto pl-3 h-full"
     :class="isMobile ? 'pl-4' : 'md:pl-4'"
     @dragover="onDragover"
@@ -254,6 +254,7 @@
     <div
       id="main_container"
       class="flex main-container"
+      :style="{ backgroundColor }"
       :class="$slots.buttons || withTitle ? (isMobile ? 'max-h-[calc(100%_-_60px)]' : 'md:max-h-[calc(100%_-_60px)]') : (isMobile ? 'max-h-[100%]' : 'md:max-h-[100%]')"
     >
       <div
@@ -622,7 +623,7 @@ export default {
     backgroundColor: {
       type: String,
       required: false,
-      default: ''
+      default: '#F7FAFC'
     },
     locale: {
       type: String,
