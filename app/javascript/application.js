@@ -300,3 +300,71 @@ const initializeChsThemeToggle = () => {
 document.addEventListener('turbo:load', initializeChsThemeToggle)
 document.addEventListener('turbo:frame-load', initializeChsThemeToggle)
 document.addEventListener('DOMContentLoaded', initializeChsThemeToggle)
+
+// CHS DocuSeal: show/hide password buttons for all password fields
+const passwordEyeIcon = `
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 12s3.5-7 10-7s10 7 10 7s-3.5 7-10 7s-10-7-10-7z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
+`
+
+const passwordEyeOffIcon = `
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 3l18 18"></path>
+    <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path>
+    <path d="M9.9 4.2A10.6 10.6 0 0 1 12 4c6.5 0 10 8 10 8a18.4 18.4 0 0 1-2.2 3.3"></path>
+    <path d="M6.6 6.6C3.7 8.5 2 12 2 12s3.5 8 10 8a10.5 10.5 0 0 0 5.4-1.5"></path>
+  </svg>
+`
+
+function setupPasswordToggles () {
+  document.querySelectorAll('input[type="password"]:not([data-password-toggle-ready])').forEach((input) => {
+    input.dataset.passwordToggleReady = 'true'
+
+    const wrapper = document.createElement('div')
+    wrapper.className = 'password-toggle-wrapper'
+
+    input.parentNode.insertBefore(wrapper, input)
+    wrapper.appendChild(input)
+
+    input.classList.add('password-toggle-input')
+
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'password-toggle-button'
+    button.setAttribute('aria-label', 'Show password')
+    button.setAttribute('title', 'Show password')
+    button.innerHTML = passwordEyeIcon
+
+    button.addEventListener('click', () => {
+      const isPassword = input.type === 'password'
+
+      input.type = isPassword ? 'text' : 'password'
+      button.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password')
+      button.setAttribute('title', isPassword ? 'Hide password' : 'Show password')
+      button.innerHTML = isPassword ? passwordEyeOffIcon : passwordEyeIcon
+
+      input.focus()
+    })
+
+    wrapper.appendChild(button)
+  })
+}
+
+document.addEventListener('turbo:load', setupPasswordToggles)
+document.addEventListener('turbo:frame-load', setupPasswordToggles)
+document.addEventListener('DOMContentLoaded', setupPasswordToggles)
+
+const passwordToggleObserver = new MutationObserver(() => {
+  setupPasswordToggles()
+})
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.body) {
+    passwordToggleObserver.observe(document.body, {
+      childList: true,
+      subtree: true
+    })
+  }
+})

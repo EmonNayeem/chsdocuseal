@@ -399,3 +399,52 @@ html[data-theme='chs-dark'] table thead th a,
 html[data-theme='chs-dark'] table thead th span {
   color: #F2FAFE !important;
 }
+
+/* CHS DocuSeal password visibility toggle */
+.password-toggle-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-toggle-input {
+  width: 100%;
+  padding-right: 3rem !important;
+}
+
+.password-toggle-button {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  background: transparent;
+  color: #6B7280;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.password-toggle-button:hover {
+  opacity: 1;
+  color: #1F4E79;
+}
+
+.password-toggle-button:focus-visible {
+  outline: 2px solid #1FA9E5;
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+/* Dark mode password visibility toggle */
+html[data-theme='chs-dark'] .password-toggle-button {
+  color: #CFEAF7;
+}
+
+html[data-theme='chs-dark'] .password-toggle-button:hover {
+  color: #FFFFFF;
+}
