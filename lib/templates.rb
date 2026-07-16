@@ -52,7 +52,18 @@ module Templates
   def plain_search(templates, keyword)
     return templates if keyword.blank?
 
-    templates.where(Template.arel_table[:name].lower.matches("%#{keyword.downcase}%"))
+    value = "%#{Template.sanitize_sql_like(keyword.downcase)}%"
+
+    templates
+      .left_joins(:author, :departments)
+      .where(
+        Template.arel_table[:name].lower.matches(value)
+          .or(User.arel_table[:first_name].lower.matches(value))
+          .or(User.arel_table[:last_name].lower.matches(value))
+          .or(User.arel_table[:email].lower.matches(value))
+          .or(Department.arel_table[:name].lower.matches(value))
+      )
+      .distinct
   end
 
   def fulltext_search(current_user, templates, keyword)

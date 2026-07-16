@@ -23,9 +23,6 @@
       </h1>
     </div>
     <div class="flex space-x-2">
-      <% if params[:q].present? || @pagy.pages > 1 || @template_folders.present? %>
-        <%= render 'shared/search_input' %>
-      <% end %>
       <% if can?(:create, ::Template) %>
         <span class="hidden sm:block">
           <%= render 'templates/upload_button' %>
@@ -37,6 +34,72 @@
       <% end %>
     </div>
   </div>
+
+  <div class="bg-base-200 rounded-2xl p-4 mb-4">
+    <%= form_with url: templates_path, method: :get, class: 'space-y-4', data: { turbo_frame: '_top' } do %>
+      <div class="flex flex-col md:flex-row gap-3 md:items-end">
+        <div class="form-control flex-1 relative">
+          <label class="label text-xs uppercase opacity-70">Search</label>
+          <%= text_field_tag :q,
+                            params[:q],
+                            placeholder: 'Search by title, creator, email or department',
+                            class: 'base-input w-full',
+                            autocomplete: 'off',
+                            data: {
+                              template_search_input: true,
+                              template_search_url: '/templates/autocomplete'
+                            } %>
+
+          <div data-template-search-results="true"
+              class="hidden absolute left-0 right-0 top-full mt-2 bg-base-100 border border-base-300 rounded-xl shadow-xl z-50 overflow-hidden">
+          </div>
+        </div>
+
+        <%= button_tag 'Search',
+                      type: 'submit',
+                      class: 'btn btn-primary h-10 px-8 md:min-w-28' %>
+      </div>
+
+      <div class="flex flex-col md:flex-row gap-3 md:items-end">
+        <div class="form-control md:w-40">
+          <label class="label text-xs uppercase opacity-70">Department</label>
+          <%= select_tag :department_id,
+                        options_from_collection_for_select(current_account.departments.order(:name), :id, :name, params[:department_id]),
+                        include_blank: 'All departments',
+                        class: 'base-select w-full' %>
+        </div>
+
+        <div class="form-control md:flex-1">
+          <label class="label text-xs uppercase opacity-70">Created by</label>
+          <%= select_tag :author_id,
+                        options_from_collection_for_select(current_account.users.active.order(:first_name, :last_name, :email), :id, :email, params[:author_id]),
+                        include_blank: 'All users',
+                        class: 'base-select w-full' %>
+        </div>
+
+        <div class="form-control md:w-44">
+          <label class="label text-xs uppercase opacity-70">Date from</label>
+          <%= date_field_tag :created_from, params[:created_from], class: 'base-input w-full' %>
+        </div>
+
+        <div class="form-control md:w-44">
+          <label class="label text-xs uppercase opacity-70">Date to</label>
+          <%= date_field_tag :created_to, params[:created_to], class: 'base-input w-full' %>
+        </div>
+
+        <%= button_tag 'Filter',
+                      type: 'submit',
+                      class: 'btn btn-primary h-10 px-8 md:min-w-28' %>
+
+        <% if params[:q].present? || dashboard_filter_active? %>
+          <%= link_to 'Clear',
+                      templates_path,
+                      class: 'btn btn-outline h-10 px-8 md:min-w-28' %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
   <% view_archived_html = capture do %>
     <% if has_archived %>
       <div>

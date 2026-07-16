@@ -8,7 +8,7 @@ class TemplatesDashboardController < ApplicationController
   TEMPLATES_PER_PAGE = 12
   FOLDERS_PER_PAGE = 18
 
-  helper_method :selected_order
+  helper_method :selected_order, :dashboard_filter_active?
 
   def index
     @template_folders =
@@ -27,7 +27,7 @@ class TemplatesDashboardController < ApplicationController
       @templates = @templates.none
     else
       @template_folders = @template_folders.reject { |e| e.name == TemplateFolder::DEFAULT_NAME }
-      @templates = filter_templates(@templates).preload(:author, :template_accesses)
+      @templates = filter_templates(@templates).preload(:author, :template_accesses, :departments)
       @templates = Templates::Order.call(@templates, current_user, selected_order)
 
       limit =
@@ -48,7 +48,7 @@ class TemplatesDashboardController < ApplicationController
   def filter_templates(templates)
     rel = templates.active
 
-    if params[:q].blank?
+    if params[:q].blank? && !dashboard_filter_active?
       if Docuseal.multitenant? ? current_account.testing? : current_account.linked_account_account
         shared_account_ids = [current_user.account_id]
         shared_account_ids << TemplateSharing::ALL_ID if !Docuseal.multitenant? && !current_account.testing?
@@ -58,7 +58,7 @@ class TemplatesDashboardController < ApplicationController
         rel = Template.where(
           Template.arel_table[:id].in(
             rel.where(folder_id: current_account.default_template_folder.id).select(:id).arel
-               .union(:all, shared_template_ids.arel)
+              .union(:all, shared_template_ids.arel)
           )
         )
       else
@@ -66,7 +66,20 @@ class TemplatesDashboardController < ApplicationController
       end
     end
 
-    Templates.search(current_user, rel, params[:q])
+    rel = Templates.search(current_user, rel, params[:q])
+    rel = rel.joins(:template_departments).where(template_departments: { department_id: params[:department_id] }) if params[:department_id].present?
+    rel = rel.where(author_id: params[:author_id]) if params[:author_id].present?
+    rel = rel.where(Template.arel_table[:created_at].gteq(Time.zone.parse(params[:created_from]).beginning_of_day)) if params[:created_from].present?
+    rel = rel.where(Template.arel_table[:created_at].lteq(Time.zone.parse(params[:created_to]).end_of_day)) if params[:created_to].present?
+
+    rel.distinct
+  end
+
+  def dashboard_filter_active?
+    params[:department_id].present? ||
+      params[:author_id].present? ||
+      params[:created_from].present? ||
+      params[:created_to].present?
   end
 
   def selected_order

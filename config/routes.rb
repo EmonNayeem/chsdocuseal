@@ -89,6 +89,7 @@ Rails.application.routes.draw do
   resources :templates_archived, only: %i[index], path: 'templates/archived'
   resources :folders, only: %i[show edit update destroy], controller: 'template_folders'
   resources :template_sharings_testing, only: %i[create]
+  get 'templates/autocomplete', to: 'templates_autocomplete#index'
   resources :templates, only: %i[index], controller: 'templates_dashboard'
   resources :submissions_filters, only: %i[show], param: 'name'
   resources :templates, only: %i[new create edit update show destroy] do

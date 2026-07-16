@@ -365,3 +365,102 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 })
+
+// CHS DocuSeal: dashboard template live search dropdown
+let templateSearchTimer = null
+
+const hideTemplateSearchResults = (resultsBox) => {
+  if (!resultsBox) return
+
+  resultsBox.classList.add('hidden')
+  resultsBox.innerHTML = ''
+}
+
+const renderTemplateSearchResults = (input, resultsBox, results) => {
+  if (!resultsBox) return
+
+  if (!input.value.trim()) {
+    hideTemplateSearchResults(resultsBox)
+    return
+  }
+
+  if (results.length === 0) {
+    resultsBox.innerHTML = `
+      <div class="px-4 py-3 text-sm opacity-70">
+        No templates found
+      </div>
+    `
+    resultsBox.classList.remove('hidden')
+    return
+  }
+
+  resultsBox.innerHTML = results.map((template) => {
+    const departments = template.departments.length > 0
+      ? template.departments.map((name) => `<span class="badge badge-info badge-outline badge-xs">${name}</span>`).join(' ')
+      : '<span class="badge badge-outline badge-xs opacity-60">No department</span>'
+
+    return `
+      <a href="${template.url}" class="block px-4 py-3 hover:bg-base-200 border-b border-base-300 last:border-b-0">
+        <div class="font-semibold text-sm">${template.name}</div>
+        <div class="text-xs opacity-70 mt-1">${template.author}</div>
+        <div class="flex flex-wrap gap-1 mt-2">${departments}</div>
+      </a>
+    `
+  }).join('')
+
+  resultsBox.classList.remove('hidden')
+}
+
+const initializeTemplateLiveSearch = () => {
+  document.querySelectorAll('[data-template-search-input]').forEach((input) => {
+    if (input.dataset.templateSearchReady === 'true') return
+
+    input.dataset.templateSearchReady = 'true'
+
+    const wrapper = input.closest('.form-control')
+    const resultsBox = wrapper?.querySelector('[data-template-search-results]')
+    const url = input.dataset.templateSearchUrl
+
+    input.addEventListener('input', () => {
+      clearTimeout(templateSearchTimer)
+
+      const query = input.value.trim()
+
+      if (query.length < 2) {
+        hideTemplateSearchResults(resultsBox)
+        return
+      }
+
+      templateSearchTimer = setTimeout(() => {
+        fetch(`${url}?q=${encodeURIComponent(query)}`, {
+          headers: {
+            Accept: 'application/json'
+          }
+        })
+          .then((response) => response.json())
+          .then((results) => renderTemplateSearchResults(input, resultsBox, results))
+          .catch(() => hideTemplateSearchResults(resultsBox))
+      }, 250)
+    })
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideTemplateSearchResults(resultsBox)
+      }
+    })
+  })
+}
+
+document.addEventListener('click', (event) => {
+  document.querySelectorAll('[data-template-search-results]').forEach((resultsBox) => {
+    const wrapper = resultsBox.closest('.form-control')
+
+    if (wrapper && !wrapper.contains(event.target)) {
+      hideTemplateSearchResults(resultsBox)
+    }
+  })
+})
+
+document.addEventListener('turbo:load', initializeTemplateLiveSearch)
+document.addEventListener('turbo:frame-load', initializeTemplateLiveSearch)
+document.addEventListener('DOMContentLoaded', initializeTemplateLiveSearch)

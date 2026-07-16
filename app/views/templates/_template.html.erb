@@ -1,4 +1,4 @@
-<div class="h-36 relative group">
+<div class="h-44 relative group">
   <a href="<%= template_path(template) %>" class="flex h-full flex-col justify-between rounded-2xl pt-6 px-7 w-full bg-base-200 before:border-2 before:border-base-300 before:border-dashed before:absolute before:left-0 before:right-0 before:top-0 before:bottom-0 before:hidden before:rounded-2xl" data-targets="dashboard-dropzone.templateCards">
     <div class="text-xl font-semibold" style="line-height: 1.6rem; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;">
       <% if template.template_accesses.present? %>
@@ -6,6 +6,21 @@
       <% end %>
       <% template.name.split(/(_)/).each do |item| %><%= item %><wbr><% end %>
     </div>
+
+    <div class="mt-2 flex flex-wrap gap-1" data-targets="dashboard-dropzone.hiddenOnDrag">
+      <% if template.departments.any? %>
+        <% template.departments.sort_by(&:name).each do |department| %>
+          <span class="badge badge-info badge-outline badge-sm">
+            <%= department.name %>
+          </span>
+        <% end %>
+      <% else %>
+        <span class="badge badge-outline badge-sm opacity-60">
+          No department
+        </span>
+      <% end %>
+    </div>
+
     <div class="pb-6 pt-1 space-y-1" data-targets="dashboard-dropzone.hiddenOnDrag">
       <p class="flex items-center space-x-1 text-xs text-base-content/60">
         <%= svg_icon('user', class: 'w-4 h-4') %>
