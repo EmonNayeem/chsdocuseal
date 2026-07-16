@@ -384,3 +384,18 @@ html[data-theme='chs-dark'] .btn[class*="opacity-"] * {
   color: #CFEAF7 !important;
   stroke: #CFEAF7 !important;
 }
+
+/* Dark mode: settings table header readability */
+html[data-theme='chs-dark'] table thead,
+html[data-theme='chs-dark'] table thead tr,
+html[data-theme='chs-dark'] table thead th {
+  background-color: #0B263A !important;
+  color: #F2FAFE !important;
+  border-color: #1F4E79 !important;
+}
+
+html[data-theme='chs-dark'] table thead th *,
+html[data-theme='chs-dark'] table thead th a,
+html[data-theme='chs-dark'] table thead th span {
+  color: #F2FAFE !important;
+}
