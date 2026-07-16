@@ -246,10 +246,7 @@ const updateUserDepartmentState = (roleSelect) => {
 
   checkboxes.forEach((checkbox) => {
     checkbox.disabled = isAdmin
-
-    if (isAdmin) {
-      checkbox.checked = false
-    }
+    checkbox.checked = isAdmin
   })
 }
 

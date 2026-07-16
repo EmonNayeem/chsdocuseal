@@ -65,7 +65,7 @@
             <label class="flex items-center gap-2">
               <%= check_box_tag 'user[department_ids][]',
                                 department.id,
-                                !admin_role_selected && user.department_ids.include?(department.id),
+                                admin_role_selected || user.department_ids.include?(department.id),
                                 class: 'checkbox checkbox-sm',
                                 disabled: admin_role_selected,
                                 data: { user_department_checkbox: true } %>
