@@ -332,3 +332,55 @@ html[data-theme='chs-dark'] template-builder.chs-template-builder-page #pages_co
   color: #12324A !important;
   stroke: #12324A !important;
 }
+
+/* Dark mode: readable disabled buttons */
+html[data-theme='chs-dark'] .btn:disabled,
+html[data-theme='chs-dark'] .btn[disabled],
+html[data-theme='chs-dark'] .btn.btn-disabled,
+html[data-theme='chs-dark'] button:disabled.btn,
+html[data-theme='chs-dark'] a.btn-disabled {
+  background-color: #1F4E79 !important;
+  border-color: #1F4E79 !important;
+  color: #CFEAF7 !important;
+  opacity: 0.65 !important;
+}
+
+/* Icons/text inside disabled buttons */
+html[data-theme='chs-dark'] .btn:disabled *,
+html[data-theme='chs-dark'] .btn[disabled] *,
+html[data-theme='chs-dark'] .btn.btn-disabled *,
+html[data-theme='chs-dark'] button:disabled.btn *,
+html[data-theme='chs-dark'] a.btn-disabled * {
+  color: #CFEAF7 !important;
+  stroke: #CFEAF7 !important;
+}
+
+/* Dark mode: disabled / inactive action buttons */
+html[data-theme='chs-dark'] .btn:disabled,
+html[data-theme='chs-dark'] button.btn:disabled,
+html[data-theme='chs-dark'] .btn[disabled],
+html[data-theme='chs-dark'] .btn.disabled,
+html[data-theme='chs-dark'] .btn.btn-disabled,
+html[data-theme='chs-dark'] .btn[aria-disabled='true'],
+html[data-theme='chs-dark'] a.btn[aria-disabled='true'],
+html[data-theme='chs-dark'] .btn.pointer-events-none,
+html[data-theme='chs-dark'] .btn[class*="opacity-"] {
+  background-color: #1F4E79 !important;
+  border-color: #1F4E79 !important;
+  color: #CFEAF7 !important;
+  opacity: 0.65 !important;
+}
+
+/* Icons/text inside disabled / inactive buttons */
+html[data-theme='chs-dark'] .btn:disabled *,
+html[data-theme='chs-dark'] button.btn:disabled *,
+html[data-theme='chs-dark'] .btn[disabled] *,
+html[data-theme='chs-dark'] .btn.disabled *,
+html[data-theme='chs-dark'] .btn.btn-disabled *,
+html[data-theme='chs-dark'] .btn[aria-disabled='true'] *,
+html[data-theme='chs-dark'] a.btn[aria-disabled='true'] *,
+html[data-theme='chs-dark'] .btn.pointer-events-none *,
+html[data-theme='chs-dark'] .btn[class*="opacity-"] * {
+  color: #CFEAF7 !important;
+  stroke: #CFEAF7 !important;
+}
