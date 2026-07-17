@@ -448,3 +448,69 @@ html[data-theme='chs-dark'] .password-toggle-button {
 html[data-theme='chs-dark'] .password-toggle-button:hover {
   color: #FFFFFF;
 }
+
+/* CHS DocuSeal custom date picker */
+.flatpickr-calendar {
+  border-radius: 1rem !important;
+  border: 1px solid #BFD3E2 !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18) !important;
+  font-family: inherit !important;
+}
+
+.flatpickr-months,
+.flatpickr-weekdays {
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected:hover {
+  background: #1FA9E5 !important;
+  border-color: #1FA9E5 !important;
+}
+
+.flatpickr-day.today {
+  border-color: #1FA9E5 !important;
+}
+
+.flatpickr-input[readonly],
+.flatpickr-input {
+  cursor: pointer;
+}
+
+/* Dark mode date picker */
+html[data-theme='chs-dark'] .flatpickr-calendar {
+  background: #0F344D !important;
+  border-color: #1F4E79 !important;
+  color: #F2FAFE !important;
+}
+
+html[data-theme='chs-dark'] .flatpickr-months,
+html[data-theme='chs-dark'] .flatpickr-weekdays {
+  background: #0B263A !important;
+}
+
+html[data-theme='chs-dark'] .flatpickr-current-month,
+html[data-theme='chs-dark'] .flatpickr-current-month input,
+html[data-theme='chs-dark'] .flatpickr-monthDropdown-months,
+html[data-theme='chs-dark'] .flatpickr-weekday,
+html[data-theme='chs-dark'] .flatpickr-day {
+  color: #F2FAFE !important;
+}
+
+html[data-theme='chs-dark'] .flatpickr-day:hover {
+  background: #17435F !important;
+  border-color: #17435F !important;
+}
+
+html[data-theme='chs-dark'] .flatpickr-day.prevMonthDay,
+html[data-theme='chs-dark'] .flatpickr-day.nextMonthDay {
+  color: #7FA9BF !important;
+}
+
+html[data-theme='chs-dark'] .flatpickr-calendar.arrowTop::before,
+html[data-theme='chs-dark'] .flatpickr-calendar.arrowTop::after {
+  border-bottom-color: #0F344D !important;
+}

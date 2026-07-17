@@ -54,6 +54,9 @@ import OpenModal from './elements/open_modal'
 import BarChart from './elements/bar_chart'
 import FieldCondition from './elements/field_condition'
 
+import flatpickr from 'flatpickr'
+import 'flatpickr/dist/flatpickr.css'
+
 import * as TurboInstantClick from './lib/turbo_instant_click'
 
 TurboInstantClick.start()
@@ -464,3 +467,30 @@ document.addEventListener('click', (event) => {
 document.addEventListener('turbo:load', initializeTemplateLiveSearch)
 document.addEventListener('turbo:frame-load', initializeTemplateLiveSearch)
 document.addEventListener('DOMContentLoaded', initializeTemplateLiveSearch)
+
+// CHS DocuSeal: consistent custom date picker for all date fields
+const initializeChsDatePickers = () => {
+  document.querySelectorAll('input[type="date"]:not([data-chs-date-picker-ready])').forEach((input) => {
+    input.dataset.chsDatePickerReady = 'true'
+
+    // Disable browser-native date UI so all users see the same date picker
+    input.type = 'text'
+    input.placeholder = 'dd/mm/yyyy'
+    input.autocomplete = 'off'
+
+    flatpickr(input, {
+      allowInput: true,
+      dateFormat: 'Y-m-d',
+      altInput: true,
+      altFormat: 'd/m/Y',
+      disableMobile: true,
+      monthSelectorType: 'dropdown'
+    })
+  })
+}
+
+document.addEventListener('turbo:load', initializeChsDatePickers)
+document.addEventListener('turbo:frame-load', initializeChsDatePickers)
+document.addEventListener('DOMContentLoaded', initializeChsDatePickers)
+
+initializeChsDatePickers()
