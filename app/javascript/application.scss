@@ -539,3 +539,45 @@ html[data-theme='chs-dark'] .submissions-dashboard-filters .border-neutral-300 {
   color: #F2FAFE !important;
   border-color: #6EA8C7 !important;
 }
+
+/* CHS DocuSeal: submissions list desktop column layout */
+@media (min-width: 768px) {
+  .submission-row-content {
+    min-width: 0;
+  }
+
+  .submission-main-info {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .submission-main-fields {
+    display: grid !important;
+    grid-template-columns: 8rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .submission-recipient {
+    min-width: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .submission-recipient-link {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .submission-actions {
+    width: 20rem;
+    max-width: 20rem;
+    min-width: 20rem;
+  }
+}
