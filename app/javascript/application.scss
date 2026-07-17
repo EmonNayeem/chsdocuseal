@@ -514,3 +514,28 @@ html[data-theme='chs-dark'] .flatpickr-calendar.arrowTop::before,
 html[data-theme='chs-dark'] .flatpickr-calendar.arrowTop::after {
   border-bottom-color: #0F344D !important;
 }
+
+/* Dark mode: submissions dashboard filter buttons */
+html[data-theme='chs-dark'] .submissions-dashboard-filters a,
+html[data-theme='chs-dark'] .submissions-dashboard-filters button {
+  color: #F2FAFE !important;
+  border-color: #6EA8C7 !important;
+}
+
+html[data-theme='chs-dark'] .submissions-dashboard-filters a:hover,
+html[data-theme='chs-dark'] .submissions-dashboard-filters button:hover {
+  background-color: #17435F !important;
+  color: #FFFFFF !important;
+  border-color: #9BD8F2 !important;
+}
+
+html[data-theme='chs-dark'] .submissions-dashboard-filters .border-neutral-700 {
+  background-color: #1FA9E5 !important;
+  color: #02131F !important;
+  border-color: #1FA9E5 !important;
+}
+
+html[data-theme='chs-dark'] .submissions-dashboard-filters .border-neutral-300 {
+  color: #F2FAFE !important;
+  border-color: #6EA8C7 !important;
+}
