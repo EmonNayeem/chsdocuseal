@@ -581,3 +581,13 @@ html[data-theme='chs-dark'] .submissions-dashboard-filters .border-neutral-300 {
     min-width: 20rem;
   }
 }
+
+/* CHS DocuSeal: submissions list table-style header */
+.submissions-list-header {
+  box-shadow: none;
+}
+
+html[data-theme='chs-dark'] .submissions-list-header {
+  background-color: #0B263A !important;
+  color: #F2FAFE !important;
+}

@@ -62,22 +62,22 @@
   </div>
 <% end %>
 <% if @pagy.count.nil? || @pagy.count > 0 %>
-  <div class="hidden md:flex items-center px-5 md:px-6 py-2 mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/60">
-    <div class="w-72 flex-shrink-0">
+  <div class="submissions-list-header hidden md:flex items-center rounded-2xl px-5 md:px-6 py-3 mb-3 text-xs font-bold uppercase tracking-wide bg-base-300 text-base-content">
+    <div class="w-72 flex-shrink-0 text-center">
       Document
     </div>
-    <div class="w-36 flex-shrink-0">
+    <div class="w-36 flex-shrink-0 text-center">
       Status
     </div>
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 text-center">
       Recipient
     </div>
-    <div class="w-80 flex-shrink-0 text-right">
+    <div class="w-80 flex-shrink-0 text-center">
       Actions
     </div>
   </div>
 
-  <div class="space-y-4">
+  <div class="space-y-4 md:space-y-3">
     <%= render partial: 'templates/submission', collection: @submissions, locals: { with_template: true } %>
   </div>
 <% end %>
