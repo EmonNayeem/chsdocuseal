@@ -1,5 +1,25 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: template_departments
+#
+#  id            :bigint           not null, primary key
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  department_id :bigint           not null
+#  template_id   :bigint           not null
+#
+# Indexes
+#
+#  index_template_departments_on_department_id_and_template_id  (department_id,template_id)
+#  index_template_departments_on_template_id_and_department_id  (template_id,department_id) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (department_id => departments.id) ON DELETE => cascade
+#  fk_rails_...  (template_id => templates.id) ON DELETE => cascade
+#
 class TemplateDepartment < ApplicationRecord
   belongs_to :template
   belongs_to :department

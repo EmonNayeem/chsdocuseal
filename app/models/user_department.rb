@@ -1,5 +1,25 @@
 # frozen_string_literal: true
 
+# == Schema Information
+#
+# Table name: user_departments
+#
+#  id            :bigint           not null, primary key
+#  created_at    :datetime         not null
+#  updated_at    :datetime         not null
+#  department_id :bigint           not null
+#  user_id       :bigint           not null
+#
+# Indexes
+#
+#  index_user_departments_on_department_id_and_user_id  (department_id,user_id)
+#  index_user_departments_on_user_id_and_department_id  (user_id,department_id) UNIQUE
+#
+# Foreign Keys
+#
+#  fk_rails_...  (department_id => departments.id) ON DELETE => cascade
+#  fk_rails_...  (user_id => users.id) ON DELETE => cascade
+#
 class UserDepartment < ApplicationRecord
   belongs_to :user
   belongs_to :department

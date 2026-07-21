@@ -161,8 +161,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
 
   create_table "departments", force: :cascade do |t|
     t.bigint "account_id", null: false
-    t.string "name", null: false
     t.datetime "created_at", null: false
+    t.string "name", null: false
     t.datetime "updated_at", null: false
     t.index ["account_id", "name"], name: "index_departments_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_departments_on_account_id"
@@ -357,7 +357,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.bigint "submission_id", null: false
     t.bigint "submitter_id"
     t.datetime "updated_at", null: false
-
     t.index ["account_id", "created_at"], name: "index_submissions_events_on_sms_event_types", where: "((event_type)::text = ANY (ARRAY[('send_sms'::character varying)::text, ('send_2fa_sms'::character varying)::text]))"
     t.index ["account_id"], name: "index_submission_events_on_account_id"
     t.index ["created_at"], name: "index_submission_events_on_created_at"
@@ -445,9 +444,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
   end
 
   create_table "template_departments", force: :cascade do |t|
-    t.bigint "template_id", null: false
-    t.bigint "department_id", null: false
     t.datetime "created_at", null: false
+    t.bigint "department_id", null: false
+    t.bigint "template_id", null: false
     t.datetime "updated_at", null: false
     t.index ["department_id", "template_id"], name: "index_template_departments_on_department_id_and_template_id"
     t.index ["template_id", "department_id"], name: "index_template_departments_on_template_id_and_department_id", unique: true
@@ -526,10 +525,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
   end
 
   create_table "user_departments", force: :cascade do |t|
-    t.bigint "user_id", null: false
-    t.bigint "department_id", null: false
     t.datetime "created_at", null: false
+    t.bigint "department_id", null: false
     t.datetime "updated_at", null: false
+    t.bigint "user_id", null: false
     t.index ["department_id", "user_id"], name: "index_user_departments_on_department_id_and_user_id"
     t.index ["user_id", "department_id"], name: "index_user_departments_on_user_id_and_department_id", unique: true
   end
