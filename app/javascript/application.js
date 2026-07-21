@@ -21,6 +21,7 @@ import SubmittersAutocomplete from './elements/submitter_autocomplete'
 import FolderAutocomplete from './elements/folder_autocomplete'
 import SignatureForm from './elements/signature_form'
 import SubmitForm from './elements/submit_form'
+import ConvertUpload from './elements/convert_upload'
 import PromptPassword from './elements/prompt_password'
 import EmailsTextarea from './elements/emails_textarea'
 import ToggleSubmit from './elements/toggle_submit'
@@ -40,19 +41,21 @@ import DashboardDropzone from './elements/dashboard_dropzone'
 import RequiredCheckboxGroup from './elements/required_checkbox_group'
 import PageContainer from './elements/page_container'
 import EmailEditor from './elements/email_editor'
+import MarkdownEditor from './elements/markdown_editor'
+import HtmlEditor from './elements/html_editor'
 import MountOnClick from './elements/mount_on_click'
 import RemoveOnEvent from './elements/remove_on_event'
 import ScrollTo from './elements/scroll_to'
 import SetValue from './elements/set_value'
 import ReviewForm from './elements/review_form'
 import ShowOnValue from './elements/show_on_value'
-import CustomValidation from './elements/custom_validation'
 import ToggleClasses from './elements/toggle_classes'
 import AutosizeField from './elements/autosize_field'
 import GoogleDriveFilePicker from './elements/google_drive_file_picker'
 import OpenModal from './elements/open_modal'
 import BarChart from './elements/bar_chart'
 import FieldCondition from './elements/field_condition'
+import ConfirmUpload from './elements/confirm_upload'
 
 import flatpickr from 'flatpickr'
 import 'flatpickr/dist/flatpickr.css'
@@ -114,6 +117,7 @@ safeRegisterElement('submitters-autocomplete', SubmittersAutocomplete)
 safeRegisterElement('folder-autocomplete', FolderAutocomplete)
 safeRegisterElement('signature-form', SignatureForm)
 safeRegisterElement('submit-form', SubmitForm)
+safeRegisterElement('convert-upload', ConvertUpload)
 safeRegisterElement('prompt-password', PromptPassword)
 safeRegisterElement('emails-textarea', EmailsTextarea)
 safeRegisterElement('toggle-cookies', ToggleCookies)
@@ -134,19 +138,21 @@ safeRegisterElement('check-on-click', CheckOnClick)
 safeRegisterElement('required-checkbox-group', RequiredCheckboxGroup)
 safeRegisterElement('page-container', PageContainer)
 safeRegisterElement('email-editor', EmailEditor)
+safeRegisterElement('markdown-editor', MarkdownEditor)
+safeRegisterElement('html-editor', HtmlEditor)
 safeRegisterElement('mount-on-click', MountOnClick)
 safeRegisterElement('remove-on-event', RemoveOnEvent)
 safeRegisterElement('scroll-to', ScrollTo)
 safeRegisterElement('set-value', SetValue)
 safeRegisterElement('review-form', ReviewForm)
 safeRegisterElement('show-on-value', ShowOnValue)
-safeRegisterElement('custom-validation', CustomValidation)
 safeRegisterElement('toggle-classes', ToggleClasses)
 safeRegisterElement('autosize-field', AutosizeField)
 safeRegisterElement('google-drive-file-picker', GoogleDriveFilePicker)
 safeRegisterElement('open-modal', OpenModal)
 safeRegisterElement('bar-chart', BarChart)
 safeRegisterElement('field-condition', FieldCondition)
+safeRegisterElement('confirm-upload', ConfirmUpload)
 
 safeRegisterElement('template-builder', class extends HTMLElement {
   connectedCallback () {
@@ -155,29 +161,40 @@ safeRegisterElement('template-builder', class extends HTMLElement {
     this.appElem = document.createElement('div')
     this.appElem.classList.add('md:h-screen')
 
+    const template = reactive(JSON.parse(this.dataset.template))
     const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'chs-dark'
     const backgroundColor = (isDarkTheme && this.dataset.darkBackgroundColor)
       ? this.dataset.darkBackgroundColor
-      : this.dataset.backgroundColor
+      : (this.dataset.backgroundColor || '#faf7f5')
 
     this.app = createApp(TemplateBuilder, {
-      template: reactive(JSON.parse(this.dataset.template)),
+      template,
+      customFields: reactive(JSON.parse(this.dataset.customFields || '[]')),
+      dateFormats: JSON.parse(this.dataset.dateFormats || '[]'),
+      dynamicDocuments: reactive(JSON.parse(this.dataset.dynamicDocuments || '[]')),
       backgroundColor,
       locale: this.dataset.locale,
       withPhone: this.dataset.withPhone === 'true',
+      withPrefillable: template.fields?.some((f) => f.prefillable),
       withVerification: ['true', 'false'].includes(this.dataset.withVerification) ? this.dataset.withVerification === 'true' : null,
       withKba: ['true', 'false'].includes(this.dataset.withKba) ? this.dataset.withKba === 'true' : null,
       withLogo: this.dataset.withLogo !== 'false',
       withFieldsDetection: this.dataset.withFieldsDetection === 'true',
+      withDetectExistingFields: this.dataset.withDetectExistingFields === 'true',
+      withRevisions: true,
+      withRevisionsMenu: this.dataset.withRevisionsMenu === 'true',
       editable: this.dataset.editable !== 'false',
       authenticityToken: document.querySelector('meta[name="csrf-token"]')?.content,
+      withCustomFields: true,
       withPayment: this.dataset.withPayment === 'true',
       isPaymentConnected: this.dataset.isPaymentConnected === 'true',
       withFormula: this.dataset.withFormula === 'true',
       withSendButton: this.dataset.withSendButton !== 'false',
       withSignYourselfButton: this.dataset.withSignYourselfButton !== 'false',
       withConditions: this.dataset.withConditions === 'true',
+      withDynamicDocuments: this.dataset.withDynamicDocuments === 'true',
       withGoogleDrive: this.dataset.withGoogleDrive === 'true',
+      pagePreviewFormat: this.dataset.pagePreviewFormat || '.jpg',
       withReplaceAndCloneUpload: true,
       withDownload: true,
       currencies: (this.dataset.currencies || '').split(',').filter(Boolean),
@@ -191,10 +208,35 @@ safeRegisterElement('template-builder', class extends HTMLElement {
   }
 
   onSubmit = (e) => {
-    if (e.detail.success && e.detail?.formSubmission?.formElement?.id === 'submitters_form') {
-      e.detail.fetchResponse.response.json().then((data) => {
-        this.component.template.submitters = data.submitters
-      })
+    if (e.detail.success) {
+      if (e.detail?.formSubmission?.formElement?.id === 'submitters_form') {
+        e.detail.fetchResponse.response.json().then((data) => {
+          this.component.template.submitters = data.submitters
+        })
+      }
+
+      if (e.detail?.formSubmission?.formElement?.action?.endsWith('/prefillable_fields')) {
+        e.detail.fetchResponse.response.text().then((data) => {
+          const doc = new DOMParser().parseFromString(data, 'text/html')
+          const fragment = doc.querySelector('turbo-stream template').content
+
+          const prefillableUuidsIndex = {}
+
+          fragment.querySelectorAll('[name="field_uuid"]').forEach((field) => {
+            prefillableUuidsIndex[field.value] = true
+          })
+
+          this.component.template.fields.forEach((field) => {
+            if (prefillableUuidsIndex[field.uuid]) {
+              field.prefillable = true
+              field.readonly = true
+            } else if (field.prefillable) {
+              delete field.prefillable
+              delete field.readonly
+            }
+          })
+        })
+      }
     }
   }
 

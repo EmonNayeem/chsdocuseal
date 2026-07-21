@@ -591,3 +591,6 @@ html[data-theme='chs-dark'] .submissions-list-header {
   background-color: #0B263A !important;
   color: #F2FAFE !important;
 }
+markdown-editor [contenteditable] p {
+  margin-bottom: 18px;
+}

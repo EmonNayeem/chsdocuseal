@@ -12,7 +12,7 @@ module Submitters
 
     def call(submitter, expires_at: Accounts.link_expires_at(Account.new(id: submitter.account_id)))
       ActiveRecord::Associations::Preloader.new(
-        records: [submitter], associations: [documents_attachments: :blob, attachments_attachments: :blob]
+        records: [submitter], associations: [{ documents_attachments: :blob, attachments_attachments: :blob }]
       ).call
 
       values = build_values_array(submitter, expires_at:)
@@ -93,11 +93,9 @@ module Submitters
     end
 
     def build_submission_status(submission)
-      submitters = submission.submitters
-
-      if submitters.all?(&:completed_at?)
+      if submission.completed_at?
         'completed'
-      elsif submitters.any?(&:declined_at?)
+      elsif submission.submitters.any?(&:declined_at?)
         'declined'
       else
         submission.expired? ? 'expired' : 'pending'

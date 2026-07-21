@@ -4,6 +4,8 @@ module Api
   class SubmittersController < ApiBaseController
     load_and_authorize_resource :submitter
 
+    before_action :maybe_return_submitter_error, only: :update
+
     def index
       submitters = Submitters.search(current_user, @submitters, params[:q])
 
@@ -34,18 +36,16 @@ module Api
       render json: Submitters::SerializeForApi.call(@submitter, with_template: true, with_events: true, params:)
     end
 
+    # rubocop:disable Metrics/MethodLength
     def update
-      if @submitter.completed_at?
-        return render json: { error: 'Submitter has already completed the submission.' }, status: :unprocessable_content
-      end
-
       submission = @submitter.submission
       role = submission.template_submitters.find { |e| e['uuid'] == @submitter.uuid }['name']
 
       normalized_params, new_attachments = Submissions::NormalizeParamUtils.normalize_submitter_params!(
         submitter_params.merge(role:),
         @submitter.template || Template.new(submitters: submission.template_submitters, account: @submitter.account),
-        for_submitter: @submitter
+        for_submitter: @submitter,
+        purpose: :api
       )
 
       Submissions::CreateFromSubmitters.maybe_set_template_fields(submission, [normalized_params],
@@ -60,11 +60,16 @@ module Api
 
         @submitter.submission.save!
 
-        SubmissionEvents.create_with_tracking_data(@submitter, 'api_complete_form', request) if @submitter.completed_at?
+        if @submitter.completed_at?
+          Submitters::SubmitValues.maybe_invite_via_field(@submitter, request)
+          SubmissionEvents.create_with_tracking_data(@submitter, 'api_complete_form', request)
+        end
       end
 
       if @submitter.completed_at?
-        ProcessSubmitterCompletionJob.perform_async('submitter_id' => @submitter.id)
+        is_last = Submissions.maybe_update_completed_at(@submitter.submission)
+
+        ProcessSubmitterCompletionJob.perform_async('submitter_id' => @submitter.id, 'is_last' => is_last)
       elsif normalized_params[:send_email] || normalized_params[:send_sms]
         Submitters.send_signature_requests([@submitter])
       end
@@ -78,6 +83,7 @@ module Api
 
       render json: { error: e.message }, status: :unprocessable_content
     end
+    # rubocop:enable Metrics/MethodLength
 
     def submitter_params
       submitter_params = params.key?(:submitter) ? params.require(:submitter) : params
@@ -94,7 +100,17 @@ module Api
 
     private
 
-    def maybe_filder_by_completed_at(submitters, params)
+    def maybe_return_submitter_error
+      if @submitter.completed_at? || @submitter.submission.completed_at?
+        return render json: { error: 'Submitter has already completed the submission.' }, status: :unprocessable_content
+      end
+
+      return unless @submitter.declined_at?
+
+      render json: { error: 'Submitter has already declined the submission.' }, status: :unprocessable_content
+    end
+
+    def maybe_filter_by_completed_at(submitters, params)
       if params[:completed_after].present?
         submitters = submitters.where(completed_at: Time.zone.parse(params[:completed_after])..)
       end
@@ -151,9 +167,7 @@ module Api
           submitter.values = Submitters::SubmitValues.maybe_remove_condition_values(submitter)
         end
 
-        submitter.values = submitter.values.transform_values do |v|
-          v == '{{date}}' ? Time.current.in_time_zone(submitter.account.timezone).to_date.to_s : v
-        end
+        submitter.values = Submitters::SubmitValues.replace_current_date_placeholders(submitter)
       end
 
       submitter
@@ -169,7 +183,7 @@ module Api
         submitters = submitters.joins(:submission).where(submissions: { template_id: params[:template_id] })
       end
 
-      maybe_filder_by_completed_at(submitters, params)
+      maybe_filter_by_completed_at(submitters, params)
     end
 
     def assign_external_id(submitter, attrs)
@@ -195,8 +209,13 @@ module Api
 
       submitter.preferences['send_sms'] = submitter_preferences['send_sms'] if submitter_preferences.key?('send_sms')
       submitter.preferences['reply_to'] = submitter_preferences['reply_to'] if submitter_preferences.key?('reply_to')
+
       if submitter_preferences.key?('require_phone_2fa')
         submitter.preferences['require_phone_2fa'] = submitter_preferences['require_phone_2fa']
+      end
+
+      if submitter_preferences.key?('require_email_2fa')
+        submitter.preferences['require_email_2fa'] = submitter_preferences['require_email_2fa']
       end
 
       if submitter_preferences.key?('go_to_last')

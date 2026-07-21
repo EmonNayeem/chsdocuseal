@@ -9,15 +9,17 @@ class SubmitFormDownloadController < ApplicationController
   def index
     @submitter = Submitter.find_by!(slug: params[:submit_form_slug])
 
-    return redirect_to submitter_download_index_path(@submitter.slug) if @submitter.completed_at?
+    return redirect_to submit_form_documents_path(@submitter.slug) if @submitter.completed_at?
 
     return head :unprocessable_content if @submitter.declined_at? ||
                                           @submitter.submission.archived_at? ||
                                           @submitter.submission.expired? ||
+                                          @submitter.submission.completed_at? ||
                                           @submitter.submission.template&.archived_at? ||
                                           AccountConfig.exists?(account_id: @submitter.account_id,
                                                                 key: AccountConfig::ALLOW_TO_PARTIAL_DOWNLOAD_KEY,
-                                                                value: false)
+                                                                value: false) ||
+                                          !Submitters::AuthorizedForForm.call(@submitter, current_user, request)
 
     last_completed_submitter = @submitter.submission.submitters
                                          .where.not(id: @submitter.id)
@@ -32,7 +34,7 @@ class SubmitFormDownloadController < ApplicationController
       end
 
     urls = attachments.map do |attachment|
-      ActiveStorage::Blob.proxy_url(attachment.blob, expires_at: FILES_TTL.from_now.to_i)
+      ActiveStorage::Blob.proxy_path(attachment.blob, expires_at: FILES_TTL.from_now.to_i)
     end
 
     render json: urls

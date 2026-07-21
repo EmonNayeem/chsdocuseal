@@ -3,7 +3,7 @@
 module Api
   class ApiBaseController < ActionController::API
     include ActiveStorage::SetCurrent
-    include Pagy::Backend
+    include Pagy::Method
 
     DEFAULT_LIMIT = 10
     MAX_LIMIT = 100
@@ -100,6 +100,10 @@ module Api
 
     def set_noindex_headers
       headers['X-Robots-Tag'] = 'noindex'
+    end
+
+    def set_security_headers
+      response.headers['X-Content-Type-Options'] = 'nosniff'
     end
 
     def set_cors_headers

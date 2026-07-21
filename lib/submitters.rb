@@ -2,7 +2,6 @@
 
 module Submitters
   TRUE_VALUES = ['1', 'true', true].freeze
-  PRELOAD_ALL_PAGES_AMOUNT = 200
 
   FIELD_NAME_WEIGHTS = {
     'email' => 'A',
@@ -14,6 +13,7 @@ module Submitters
   UnableToSendCode = Class.new(StandardError)
   InvalidOtp = Class.new(StandardError)
   MaliciousFileExtension = Class.new(StandardError)
+  ParamsError = Class.new(StandardError)
 
   DANGEROUS_EXTENSIONS = Set.new(%w[
     exe com bat cmd scr pif vbs vbe js jse wsf wsh msi msp
@@ -24,6 +24,8 @@ module Submitters
     appxbundle msix msixbundle diagcab diagpkg cpl msc ocx
     drv scr ins isp mst paf prf shb shs slk ws wsc inf1 inf2
   ].freeze)
+
+  FILES_TTL = 5.minutes
 
   module_function
 
@@ -82,7 +84,7 @@ module Submitters
     submitter_ids = SearchEntry.where(record_type: 'Submitter')
                                .where(account_id: current_user.account_id)
                                .where(*query)
-                               .limit(500)
+                               .limit(keyword.strip.length > 2 ? 500 : 5000)
                                .pluck(:record_id)
 
     submitters.where(id: submitter_ids.first(100))
@@ -103,10 +105,10 @@ module Submitters
   end
 
   def select_attachments_for_download(submitter)
-    if AccountConfig.exists?(account_id: submitter.submission.account_id,
+    if AccountConfig.exists?(account_id: submitter.account_id,
                              key: AccountConfig::COMBINE_PDF_RESULT_KEY,
                              value: true) &&
-       submitter.submission.submitters.all?(&:completed_at?) &&
+       submitter.submission.completed_at? &&
        submitter.submission.template_fields.none? { |f| f['type'] == 'verification' }
       return [submitter.submission.combined_document_attachment || Submissions::EnsureCombinedGenerated.call(submitter)]
     end
@@ -120,27 +122,21 @@ module Submitters
     end
   end
 
-  def create_attachment!(submitter, params)
-    blob =
-      if (file = params[:file])
-        extension = File.extname(file.original_filename).delete_prefix('.').downcase
+  def create_attachment!(submitter, file, metadata: {})
+    raise ParamsError, 'file param is missing' if file.blank?
 
-        if DANGEROUS_EXTENSIONS.include?(extension)
-          raise MaliciousFileExtension, "File type '.#{extension}' is not allowed."
-        end
+    extension = File.extname(file.original_filename).delete_prefix('.').downcase
 
-        ActiveStorage::Blob.create_and_upload!(io: file.open,
-                                               filename: file.original_filename,
-                                               content_type: file.content_type)
-      else
-        ActiveStorage::Blob.find_signed(params[:blob_signed_id])
-      end
+    if DANGEROUS_EXTENSIONS.include?(extension)
+      raise MaliciousFileExtension, "File type '.#{extension}' is not allowed."
+    end
 
-    ActiveStorage::Attachment.create!(
-      blob:,
-      name: params[:name],
-      record: submitter
-    )
+    blob = ActiveStorage::Blob.create_and_upload!(io: file.tap(&:rewind).open,
+                                                  filename: file.original_filename,
+                                                  content_type: file.content_type,
+                                                  metadata:)
+
+    ActiveStorage::Attachment.create!(blob:, name: 'attachments', record: submitter)
   end
 
   def normalize_preferences(account, user, params)
@@ -181,6 +177,7 @@ module Submitters
     end
   end
 
+  # rubocop:disable Metrics
   def current_submitter_order?(submitter)
     submission = submitter.submission
 
@@ -193,6 +190,14 @@ module Submitters
         current_group_index = submitter_groups.find_index { |_, group| group.any? { |s| s['uuid'] == submitter.uuid } }
 
         submitter_groups.first(current_group_index).flat_map(&:last)
+      elsif submitter.viewer?
+        current_index = submitter_items.find_index { |e| e['uuid'] == submitter.uuid }
+
+        preceding_submitter_index = submitter_items[0...current_index].rindex do |e|
+          !submission.submitters.find { |s| s.uuid == e['uuid'] }&.viewer?
+        end
+
+        submitter_items.first(preceding_submitter_index || 0)
       else
         submitter_items.first(submitter_items.find_index { |e| e['uuid'] == submitter.uuid })
       end
@@ -200,18 +205,19 @@ module Submitters
     before_items.all? do |item|
       submitter = submission.submitters.find { |e| e.uuid == item['uuid'] }
 
-      submitter.nil? || submitter.completed_at?
+      submitter.nil? || submitter.viewer? || submitter.completed_at?
     end
   end
+  # rubocop:enable Metrics
 
   def build_document_filename(submitter, blob, filename_format)
     return blob.filename.to_s if filename_format.blank?
 
-    filename = ReplaceEmailVariables.call(filename_format, submitter:)
+    filename = filename_format.gsub('{document.name}', blob.filename.base)
+    filename = ReplaceEmailVariables.call(filename, submitter:)
 
-    filename = filename.gsub('{document.name}', blob.filename.base)
     filename = filename.gsub(' - {submission.status}') do
-      if submitter.submission.submitters.all?(&:completed_at?)
+      if submitter.submission.completed_at?
         status =
           if submitter.submission.template_fields.any? { |f| f['type'] == 'signature' }
             I18n.t(:signed)
@@ -223,10 +229,12 @@ module Submitters
       end
     end
 
-    filename = filename.gsub(
-      '{submission.completed_at}',
-      I18n.l(submitter.completed_at.in_time_zone(submitter.account.timezone), format: :short)
-    )
+    filename = filename.gsub('{submission.completed_at}') do
+      completed_at = submitter.submission.completed_at ||
+                     submitter.submission.submitters.select(&:completed_at).max_by(&:completed_at).completed_at
+
+      I18n.l(completed_at.in_time_zone(submitter.account.timezone), format: :short)
+    end
 
     "#{filename}.#{blob.filename.extension}"
   end
@@ -252,6 +260,36 @@ module Submitters
     raise InvalidOtp, I18n.t(:invalid_code) unless EmailVerificationCodes.verify(otp, link_2fa_key)
 
     true
+  end
+
+  def build_document_urls(submitter, ttl: FILES_TTL)
+    filename_format = AccountConfig.find_or_initialize_by(account_id: submitter.account_id,
+                                                          key: AccountConfig::DOCUMENT_FILENAME_FORMAT_KEY)&.value
+
+    select_attachments_for_download(submitter).map do |attachment|
+      ActiveStorage::Blob.proxy_path(
+        attachment.blob,
+        expires_at: ttl.from_now.to_i,
+        filename: build_document_filename(submitter, attachment.blob, filename_format)
+      )
+    end
+  end
+
+  def build_combined_url(submitter, ttl: FILES_TTL)
+    return unless submitter.submission.completed_at?
+    return if submitter.submission.submitters.completed.order(:completed_at).last != submitter
+
+    attachment = submitter.submission.combined_document_attachment
+    attachment ||= Submissions::EnsureCombinedGenerated.call(submitter)
+
+    filename_format = AccountConfig.find_or_initialize_by(account_id: submitter.account_id,
+                                                          key: AccountConfig::DOCUMENT_FILENAME_FORMAT_KEY)&.value
+
+    ActiveStorage::Blob.proxy_path(
+      attachment.blob,
+      expires_at: ttl.from_now.to_i,
+      filename: build_document_filename(submitter, attachment.blob, filename_format)
+    )
   end
 
   def populate_completed_is_first

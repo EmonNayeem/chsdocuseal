@@ -5,11 +5,24 @@ ActiveSupport.on_load(:active_storage_attachment) do
 
   has_many_attached :preview_images
 
+  def self.service_url_time
+    return unless Docuseal.multitenant?
+
+    now = Time.current
+
+    now.min < 30 ? now.beginning_of_hour : now.beginning_of_hour + 30.minutes
+  end
+
   def signed_uuid
     @signed_uuid ||= ApplicationRecord.signed_id_verifier.generate(uuid, expires_in: 6.hours, purpose: :attachment)
   end
+
+  def signed_key
+    @signed_key ||= ApplicationRecord.signed_id_verifier.generate([id, uuid], expires_in: 6.hours, purpose: :attachment)
+  end
 end
 
+# rubocop:disable Metrics/BlockLength
 ActiveSupport.on_load(:active_storage_blob) do
   attribute :uuid, :string, default: -> { SecureRandom.uuid }
   attribute :io_data, :string, default: ''
@@ -19,6 +32,12 @@ ActiveSupport.on_load(:active_storage_blob) do
       signed_uuid: blob.signed_uuid(expires_at:), filename: filename || blob.filename,
       **Docuseal.default_url_options,
       **{ host: }.compact
+    )
+  end
+
+  def self.proxy_path(blob, expires_at: nil, filename: nil)
+    Rails.application.routes.url_helpers.blobs_proxy_path(
+      signed_uuid: blob.signed_uuid(expires_at:), filename: filename || blob.filename
     )
   end
 
@@ -40,6 +59,7 @@ ActiveSupport.on_load(:active_storage_blob) do
     service.delete(key)
   end
 end
+# rubocop:enable Metrics/BlockLength
 
 ActiveStorage::LogSubscriber.detach_from(:active_storage) if Rails.env.production?
 

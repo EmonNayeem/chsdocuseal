@@ -73,8 +73,18 @@ class Template < ApplicationRecord
   has_many :template_departments, dependent: :destroy
   has_many :departments, through: :template_departments
 
+  has_many :template_versions, dependent: :destroy
+  has_many :dynamic_documents, dependent: :destroy
+  has_many :dynamic_document_versions, through: :dynamic_documents, source: :versions
+
+  has_many :schema_dynamic_documents, lambda { |e|
+    where(uuid: e.schema.select { |item| item['dynamic'] }.pluck('attachment_uuid'))
+  }, class_name: 'DynamicDocument', dependent: :destroy, inverse_of: :template
+
   scope :active, -> { where(archived_at: nil) }
   scope :archived, -> { where.not(archived_at: nil) }
+
+  scope :select_for_list, -> { select(:id, :name, :author_id, :account_id, :created_at, :archived_at, :folder_id) }
 
   def application_key
     external_id

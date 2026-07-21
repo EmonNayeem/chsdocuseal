@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'puma/plugin'
+require 'redis_client'
 
 # rubocop:disable Metrics
 Puma::Plugin.create do
@@ -14,14 +15,14 @@ Puma::Plugin.create do
   end
 
   def start(launcher)
-    launcher.events.on_booted do
+    launcher.events.after_booted do
       next if Puma.stats_hash[:workers].to_i != 0
 
       start_sidekiq!
     end
 
-    launcher.events.on_stopped { Thread.new { @sidekiq&.stop }.join }
-    launcher.events.on_restart { Thread.new { @sidekiq&.stop }.join }
+    launcher.events.after_stopped { Thread.new { @sidekiq&.stop }.join }
+    launcher.events.before_restart { Thread.new { @sidekiq&.stop }.join }
   end
 
   def fire_event(config, event)
@@ -37,7 +38,7 @@ Puma::Plugin.create do
       wait_for_redis!
 
       configs = Sidekiq.configure_embed do |config|
-        config.logger.level = Logger::INFO
+        config.logger.level = Rails.env.development? ? Logger::DEBUG : Logger::INFO
         sidekiq_config = YAML.load_file('config/sidekiq.yml')
         sidekiq_config['queues'] << 'fields' if ENV['DEMO'] == 'true'
         config.queues = sidekiq_config['queues']
@@ -68,7 +69,7 @@ Puma::Plugin.create do
 
       break
     rescue RedisClient::CannotConnectError
-      raise('Unable to connect to redis') if attempt > 10
+      raise('Unable to connect to redis') if attempt > 30
     end
   end
 end

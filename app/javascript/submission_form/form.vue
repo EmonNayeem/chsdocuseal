@@ -1,5 +1,52 @@
 <template>
+  <Teleport
+    v-if="withAccessibilityAreas === null && !isAccessibilityMode"
+    to="#sr_only_content"
+  >
+    <button
+      class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-base-100 focus:text-base-content focus:rounded focus:shadow-lg"
+      @click="isAccessibilityMode = true"
+    >
+      {{ t('enter_screen_reader_mode') }}
+    </button>
+  </Teleport>
+  <Teleport
+    v-for="item in (withAccessibilityAreas === null ? schema : [])"
+    :key="item.attachment_uuid"
+    :to="`#document-${item.attachment_uuid} .sr_only_content`"
+  >
+    <button
+      v-if="!isAccessibilityMode"
+      class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-base-100 focus:text-base-content focus:rounded focus:shadow-lg"
+      @click="isAccessibilityMode = true"
+    >
+      {{ t('enter_screen_reader_mode') }}
+    </button>
+  </Teleport>
+  <AccessibilityAreas
+    v-if="withAccessibilityAreas || isAccessibilityMode"
+    ref="areas"
+    :submitter-slug="submitterSlug"
+    :steps="stepFields"
+    :readonly-conditional-fields="readonlyConditionalFields"
+    :readonly-conditional-field-values="readonlyConditionalFieldValues"
+    :formula-fields="formulaFields"
+    :values="values"
+    :readonly-values="readonlyFieldValues"
+    :submitter="submitter"
+    :scroll-el="scrollEl"
+    :current-step="currentStepFields"
+    :with-field-placeholder="withFieldPlaceholder"
+    :with-signature-id="withSignatureId"
+    :with-label="withFieldLabels && !isAnonymousChecboxes && showFieldNames"
+    :scroll-padding="scrollPadding"
+    :attachments-index="attachmentsIndex"
+    :fetch-options="fetchOptions"
+    :filled-fields-index="filledFieldsIndex"
+    @focus-step="[saveStep(), currentField.type !== 'checkbox' ? isFormVisible = true : '', goToStep($event, false, true)]"
+  />
   <FieldAreas
+    v-if="!withAccessibilityAreas && !isAccessibilityMode"
     ref="areas"
     :steps="stepFields"
     :values="values"
@@ -14,6 +61,7 @@
     @focus-step="[saveStep(), currentField.type !== 'checkbox' ? isFormVisible = true : '', goToStep($event, false, true)]"
   />
   <FieldAreas
+    v-if="!withAccessibilityAreas && !isAccessibilityMode"
     :steps="readonlyConditionalFields.map((e) => [e])"
     :values="readonlyConditionalFieldValues"
     :submitter="submitter"
@@ -21,7 +69,7 @@
     :submittable="false"
   />
   <FormulaFieldAreas
-    v-if="formulaFields.length"
+    v-if="!withAccessibilityAreas && !isAccessibilityMode && formulaFields.length"
     :fields="formulaFields"
     :readonly-values="readonlyFieldValues"
     :values="values"
@@ -47,7 +95,7 @@
       v-else
       id="complete_form_button"
       class="btn btn-sm btn-neutral text-white px-4 w-full flex justify-center"
-      form="steps_form"
+      form="complete_form"
       type="submit"
       name="completed"
       value="true"
@@ -57,6 +105,7 @@
         <IconInnerShadowTop
           v-if="isSubmittingComplete"
           class="mr-1 animate-spin w-5 h-5"
+          aria-hidden="true"
         />
         <span>
           {{ t('complete') }}
@@ -64,12 +113,45 @@
       </span>
     </button>
   </Teleport>
+  <Teleport
+    v-for="ref in (showCompleteButton ? [completeButtonContainer, completeButtonScrollContainer].filter(Boolean) : [])"
+    :key="ref"
+    :to="ref"
+  >
+    <button
+      class="complete-button btn btn-sm btn-neutral text-white px-4"
+      form="complete_form"
+      type="submit"
+      name="completed"
+      value="true"
+      :disabled="isSubmittingComplete"
+    >
+      <span class="flex items-center">
+        <IconInnerShadowTop
+          v-if="isSubmittingComplete"
+          class="mr-1 animate-spin w-5 h-5"
+          aria-hidden="true"
+        />
+        <span>
+          {{ t('complete') }}
+        </span>
+      </span>
+    </button>
+  </Teleport>
+  <form
+    v-if="!isCompleted && !isInvite"
+    id="complete_form"
+    class="hidden"
+    :action="submitPath"
+    method="post"
+    @submit.prevent="submitStep"
+  />
   <button
-    v-if="!isFormVisible"
+    v-if="!isFormVisible && currentField"
     id="expand_form_button"
     class="btn btn-neutral flex text-white absolute bottom-0 w-full mb-3 expand-form-button text-base"
     style="width: 96%; margin-left: 2%"
-    @click.prevent="[isFormVisible = true, scrollIntoField(currentField)]"
+    @click.prevent="[isFormVisible = true, $nextTick(() => scrollIntoField(currentField))]"
   >
     <template v-if="['initials', 'signature'].includes(currentField.type)">
       <IconWritingSign stroke-width="1.5" />
@@ -88,9 +170,11 @@
       class="absolute right-0 mr-4"
       :width="20"
       :height="20"
+      aria-hidden="true"
     />
   </button>
   <div
+    v-if="currentField"
     v-show="isFormVisible"
     id="form_container"
     class="shadow-md bg-base-100 absolute bottom-0 w-full border-base-200 border p-4 rounded form-container overflow-hidden"
@@ -103,11 +187,13 @@
       class="absolute right-0 top-0 minimize-form-button"
       :class="currentField?.description?.length > 100 ? 'mr-1 mt-1 md:mr-2 md:mt-2': 'mr-2 mt-2 hidden md:block'"
       :title="t('minimize')"
+      :aria-label="t('minimize')"
       @click.prevent="minimizeForm"
     >
       <IconArrowsDiagonalMinimize2
         :width="20"
         :height="20"
+        aria-hidden="true"
       />
     </button>
     <div
@@ -193,6 +279,7 @@
             />
             <div
               v-if="currentField.description"
+              :id="currentField.uuid + '-desc'"
               dir="auto"
               class="mb-3 px-1 field-description-text"
             >
@@ -203,6 +290,8 @@
               :id="currentField.uuid"
               dir="auto"
               :required="currentField.required"
+              :aria-label="showFieldNames && (currentField.name || currentField.title) ? undefined : (currentField.name || currentField.title || t('select_your_option'))"
+              :aria-describedby="currentField.description ? currentField.uuid + '-desc' : undefined"
               class="select base-input !text-2xl w-full text-center font-normal"
               :class="{ 'text-gray-300': !values[currentField.uuid] }"
               :name="`values[${currentField.uuid}]`"
@@ -230,7 +319,7 @@
           <div v-else-if="currentField.type === 'radio'">
             <label
               v-if="showFieldNames && (currentField.name || currentField.title)"
-              :for="currentField.uuid"
+              :id="currentField.uuid + '-radio-label'"
               dir="auto"
               class="label text-xl sm:text-2xl py-0 mb-2 sm:mb-3.5 field-name-label"
               :class="{ 'mb-2': !currentField.description }"
@@ -250,6 +339,7 @@
             </label>
             <div
               v-if="currentField.description"
+              :id="currentField.uuid + '-desc'"
               dir="auto"
               class="mb-3 px-1 field-description-text"
             >
@@ -268,6 +358,8 @@
               </div>
               <div
                 class="space-y-3.5 mx-auto"
+                role="radiogroup"
+                :aria-labelledby="(currentField.name || currentField.title) ? currentField.uuid + '-radio-label' : null"
                 :class="{ hidden: !showFieldNames || (currentField.options.every((e) => !e.value) && currentField.options.length > 4) }"
               >
                 <div
@@ -309,6 +401,7 @@
           >
             <div
               v-if="currentField.description"
+              :id="currentField.uuid + '-desc'"
               dir="auto"
               class="mb-3 px-1 field-description-text"
             >
@@ -395,11 +488,15 @@
             v-model="values[currentField.uuid]"
             :reason="values[currentField.preferences?.reason_field_uuid]"
             :field="currentField"
+            :values="values"
             :previous-value="previousSignatureValueFor(currentField) || previousSignatureValue"
+            :touch-attachment-uuid="previousSignatureValue"
             :with-typed-signature="withTypedSignature"
             :remember-signature="rememberSignature"
             :attachments-index="attachmentsIndex"
             :require-signing-reason="requireSigningReason"
+            :signature-text="signatureText"
+            :signature-src="signatureSrc"
             :button-text="submitButtonText"
             :dry-run="dryRun"
             :with-disclosure="withDisclosure"
@@ -407,6 +504,7 @@
             :submitter="submitter"
             :show-field-names="showFieldNames"
             @update:reason="values[currentField.preferences?.reason_field_uuid] = $event"
+            @touch-attachment="attachmentsIndex[previousSignatureValue] ? attachmentsIndex[previousSignatureValue].created_at = new Date() : null"
             @attached="attachments.push($event)"
             @start="scrollIntoField(currentField)"
             @minimize="minimizeForm"
@@ -418,6 +516,7 @@
             v-model="values[currentField.uuid]"
             :field="currentField"
             :dry-run="dryRun"
+            :submitter="submitter"
             :previous-value="previousInitialsValue"
             :attachments-index="attachmentsIndex"
             :show-field-names="showFieldNames"
@@ -505,6 +604,7 @@
               <IconInnerShadowTop
                 v-if="isSubmitting"
                 class="mr-1 animate-spin"
+                aria-hidden="true"
               />
               <span>
                 {{ submitButtonText }}
@@ -516,6 +616,7 @@
           </button>
           <div
             v-if="showFillAllRequiredFields"
+            role="alert"
             class="text-center mt-1"
           >
             {{ t('please_fill_all_required_fields') }}
@@ -526,6 +627,7 @@
         v-else-if="isInvite"
         :submitters="inviteSubmitters"
         :optional-submitters="optionalInviteSubmitters"
+        :fetch-options="fetchOptions"
         :submitter-slug="submitterSlug"
         :authenticity-token="authenticityToken"
         :url="baseUrl + submitPath + '/invite'"
@@ -539,6 +641,7 @@
         :has-signature-fields="stepFields.some((fields) => fields.some((f) => ['signature', 'initials'].includes(f.type)))"
         :has-multiple-documents="hasMultipleDocuments"
         :completed-button="completedRedirectUrl ? {} : completedButton"
+        :fetch-options="fetchOptions"
         :completed-message="completedRedirectUrl ? {} : completedMessage"
         :with-send-copy-button="withSendCopyButton && !completedRedirectUrl"
         :with-download-button="withDownloadButton && !completedRedirectUrl && !dryRun"
@@ -546,21 +649,29 @@
         :can-send-email="canSendEmail && !!submitter.email"
         :submitter-slug="submitterSlug"
       />
-      <div
+      <nav
         v-if="stepFields.length < 80"
+        :aria-label="t('form_progress')"
+        :aria-hidden="isCompleted"
         class="flex justify-center mt-3 sm:mt-4 mb-0 sm:mb-1 select-none"
       >
         <div class="flex items-center flex-wrap steps-progress">
-          <a
+          <template
             v-for="(step, index) in stepFields"
             :key="step[0].uuid"
-            href="#"
-            class="inline border border-base-300 h-3 w-3 rounded-full mx-1 mt-1"
-            :class="{ 'bg-base-300 steps-progress-current': index === currentStep, 'bg-base-content': (index < currentStep && stepFields[index].every((f) => !f.required || ![null, undefined, ''].includes(values[f.uuid]))) || isCompleted, 'bg-white': index > currentStep }"
-            @click.prevent="isCompleted ? '' : [saveStep(), goToStep(index, true)]"
-          />
+          >
+            <button
+              v-if="!onlyRequiredFields || step.some((f) => f.required)"
+              type="button"
+              :aria-label="`${t('step')} ${index + 1}`"
+              :aria-current="index === currentStep ? 'step' : undefined"
+              class="inline border border-base-300 h-3 w-3 rounded-full mx-1 mt-1 p-0"
+              :class="{ 'bg-base-300 steps-progress-current': index === currentStep, 'bg-base-content': (index < currentStep && stepFields[index].every((f) => !f.required || ![null, undefined, ''].includes(values[f.uuid]))) || isCompleted, 'bg-white': index > currentStep }"
+              @click="isCompleted ? '' : [saveStep(), goToStep(index, true)]"
+            />
+          </template>
         </div>
-      </div>
+      </nav>
       <div
         v-else
         class="mt-5"
@@ -572,6 +683,7 @@
 <script>
 import FieldAreas from './areas'
 import FormulaFieldAreas from './formula_areas'
+import AccessibilityAreas from './accessibility_areas'
 import ImageStep from './image_step'
 import SignatureStep from './signature_step'
 import InitialsStep from './initials_step'
@@ -591,6 +703,18 @@ import { IconInnerShadowTop, IconArrowsDiagonal, IconWritingSign, IconArrowsDiag
 import AppearsOn from './appears_on'
 import i18n from './i18n'
 import { sanitizeUrl } from '@braintree/sanitize-url'
+
+if (typeof URL.canParse !== 'function') {
+  URL.canParse = function (url, base) {
+    try {
+      const parsed = new URL(url, base)
+
+      return !!parsed
+    } catch {
+      return false
+    }
+  }
+}
 
 const isEmpty = (obj) => {
   if (obj == null) return true
@@ -618,6 +742,7 @@ export default {
   name: 'SubmissionForm',
   components: {
     FieldAreas,
+    AccessibilityAreas,
     ImageStep,
     SignatureStep,
     AppearsOn,
@@ -658,6 +783,11 @@ export default {
       required: false,
       default: () => []
     },
+    fetchOptions: {
+      type: Object,
+      required: false,
+      default: () => ({})
+    },
     optionalInviteSubmitters: {
       type: Array,
       required: false,
@@ -678,6 +808,11 @@ export default {
       required: false,
       default: false
     },
+    onlyRequiredFields: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
     requireSigningReason: {
       type: Boolean,
       required: false,
@@ -689,6 +824,16 @@ export default {
       default: false
     },
     completeButtonToRef: {
+      type: Object,
+      required: false,
+      default: null
+    },
+    completeButtonContainer: {
+      type: Object,
+      required: false,
+      default: null
+    },
+    completeButtonScrollContainer: {
       type: Object,
       required: false,
       default: null
@@ -790,12 +935,32 @@ export default {
       required: false,
       default: ''
     },
+    filledFieldsIndex: {
+      type: Object,
+      required: false,
+      default: null
+    },
+    withAccessibilityAreas: {
+      type: Boolean,
+      required: false,
+      default: null
+    },
     fields: {
       type: Array,
       required: false,
       default: () => []
     },
     backgroundColor: {
+      type: String,
+      required: false,
+      default: ''
+    },
+    signatureText: {
+      type: String,
+      required: false,
+      default: ''
+    },
+    signatureSrc: {
       type: String,
       required: false,
       default: ''
@@ -890,7 +1055,9 @@ export default {
       isSubmitting: false,
       isSubmittingComplete: false,
       submittedValues: {},
-      recalculateButtonDisabledKey: ''
+      isFormStarted: false,
+      recalculateButtonDisabledKey: '',
+      isAccessibilityMode: false
     }
   },
   computed: {
@@ -914,10 +1081,12 @@ export default {
       }, {})
     },
     attachmentConditionsIndex () {
+      const cache = {}
+
       return this.schema.reduce((acc, item) => {
         if (item.conditions?.length) {
           if (item.conditions.every((c) => this.fieldsUuidIndex[c.field_uuid])) {
-            acc[item.attachment_uuid] = this.checkFieldConditions(item)
+            acc[item.attachment_uuid] = this.checkFieldConditions(item, cache)
           } else {
             acc[item.attachment_uuid] = true
           }
@@ -935,10 +1104,20 @@ export default {
         })
       })
     },
+    showCompleteButton () {
+      return this.completeButtonContainer && !this.isCompleted && !this.isInvite && this.isFormStarted &&
+        !this.stepFields.find((fields) => fields.some((f) => f.required && isEmpty(this.submittedValues[f.uuid])))
+    },
     submitButtonText () {
       if (this.alwaysMinimize) {
         return this.t('submit')
-      } else if (this.stepFields.length === this.currentStep + 1) {
+      } else if (!this.onlyRequiredFields && this.stepFields.length === this.currentStep + 1) {
+        if (this.currentField.type === 'signature') {
+          return this.t('sign_and_complete')
+        } else {
+          return this.t('complete')
+        }
+      } else if (this.onlyRequiredFields && !this.findNextStep(this.currentStep)) {
         if (this.currentField.type === 'signature') {
           return this.t('sign_and_complete')
         } else {
@@ -984,7 +1163,9 @@ export default {
     },
     previousInitialsValue () {
       if (this.reuseSignature !== false) {
-        const initialsField = [...this.fields].reverse().find((field) => field.type === 'initials' && !!this.values[field.uuid])
+        const initialsField = this.fields.findLast
+          ? this.fields.findLast((field) => field.type === 'initials' && !!this.values[field.uuid])
+          : [...this.fields].reverse().find((field) => field.type === 'initials' && !!this.values[field.uuid])
 
         return this.values[initialsField?.uuid]
       } else {
@@ -992,7 +1173,11 @@ export default {
       }
     },
     isAnonymousChecboxes () {
-      return this.currentField.type === 'checkbox' && this.currentStepFields.every((e) => !e.name && !e.required) && this.currentStepFields.length > 4
+      if (this.currentField) {
+        return this.currentField.type === 'checkbox' && this.currentStepFields.every((e) => !e.name && !e.required) && this.currentStepFields.length > 4
+      } else {
+        return false
+      }
     },
     isButtonDisabled () {
       if (this.recalculateButtonDisabledKey) {
@@ -1011,7 +1196,9 @@ export default {
       return this.readonlyFields.filter((f) => f.conditions?.length)
     },
     readonlyFields () {
-      return this.fields.filter((f) => f.readonly && this.checkFieldConditions(f) && this.checkFieldDocumentsConditions(f))
+      const cache = {}
+
+      return this.fields.filter((f) => f.readonly && this.checkFieldConditions(f, cache) && this.checkFieldDocumentsConditions(f))
     },
     stepFields () {
       const verificationFields = []
@@ -1066,10 +1253,12 @@ export default {
         sortedFields.push(verificationFields.pop())
       }
 
+      const cache = {}
+
       return sortedFields.reduce((acc, f) => {
         const prevStep = acc[acc.length - 1]
 
-        if (this.checkFieldConditions(f) && this.checkFieldDocumentsConditions(f)) {
+        if (this.checkFieldConditions(f, cache) && this.checkFieldDocumentsConditions(f)) {
           if (f.type === 'checkbox' && Array.isArray(prevStep) && prevStep[0].type === 'checkbox' && !f.description) {
             prevStep.push(f)
           } else {
@@ -1081,7 +1270,9 @@ export default {
       }, [])
     },
     formulaFields () {
-      return this.fields.filter((f) => f.preferences?.formula && f.type !== 'payment' && this.checkFieldConditions(f) && this.checkFieldDocumentsConditions(f))
+      const cache = {}
+
+      return this.fields.filter((f) => f.preferences?.formula && f.type !== 'payment' && this.checkFieldConditions(f, cache) && this.checkFieldDocumentsConditions(f))
     },
     attachmentsIndex () {
       return this.attachments.reduce((acc, a) => {
@@ -1143,15 +1334,17 @@ export default {
       this.currentStep = Math.max(stepIndex, 0)
     } else if (this.goToLast) {
       const requiredEmptyStepIndex = this.stepFields.indexOf(this.stepFields.find((fields) => fields.some((f) => f.required && !this.submittedValues[f.uuid])))
-      const lastFilledStepIndex = this.stepFields.indexOf([...this.stepFields].reverse().find((fields) => fields.some((f) => !!this.submittedValues[f.uuid]))) + 1
+      const lastFilledStepIndex = this.stepFields.indexOf(this.stepFields.findLast
+        ? this.stepFields.findLast((fields) => fields.some((f) => !!this.submittedValues[f.uuid]))
+        : [...this.stepFields].reverse().find((fields) => fields.some((f) => !!this.submittedValues[f.uuid]))) + 1
 
       const indexesList = [this.stepFields.length - 1]
 
-      if (requiredEmptyStepIndex !== -1) {
+      if (requiredEmptyStepIndex !== -1 && (!this.onlyRequiredFields || this.stepFields[requiredEmptyStepIndex].some((f) => f.required))) {
         indexesList.push(requiredEmptyStepIndex)
       }
 
-      if (lastFilledStepIndex !== -1) {
+      if (lastFilledStepIndex !== -1 && (!this.onlyRequiredFields || this.stepFields[lastFilledStepIndex].some((f) => f.required))) {
         indexesList.push(lastFilledStepIndex)
       }
 
@@ -1211,27 +1404,35 @@ export default {
         return true
       }
     },
-    checkFieldConditions (field) {
+    checkFieldConditions (field, cache = {}) {
+      const cacheKey = field.uuid || field.attachment_uuid
+
+      if (cache[cacheKey] !== undefined) {
+        return cache[cacheKey]
+      }
+
       if (field.conditions?.length) {
         const result = field.conditions.reduce((acc, cond) => {
           if (cond.operation === 'or') {
-            acc.push(acc.pop() || this.checkFieldCondition(cond))
+            acc.push(acc.pop() || this.checkFieldCondition(cond, cache))
           } else {
-            acc.push(this.checkFieldCondition(cond))
+            acc.push(this.checkFieldCondition(cond, cache))
           }
 
           return acc
         }, [])
 
-        return !result.includes(false)
+        cache[cacheKey] = !result.includes(false)
       } else {
-        return true
+        cache[cacheKey] = true
       }
+
+      return cache[cacheKey]
     },
-    checkFieldCondition (condition) {
+    checkFieldCondition (condition, cache = {}) {
       const field = this.fieldsUuidIndex[condition.field_uuid]
 
-      if (['not_empty', 'checked', 'equal', 'contains'].includes(condition.action) && field && !this.checkFieldConditions(field)) {
+      if (['not_empty', 'checked', 'equal', 'contains', 'greater_than', 'less_than'].includes(condition.action) && field && !this.checkFieldConditions(field, cache)) {
         return false
       }
 
@@ -1241,20 +1442,50 @@ export default {
         return isEmpty(this.values[condition.field_uuid] ?? defaultValue)
       } else if (['not_empty', 'checked'].includes(condition.action)) {
         return !isEmpty(this.values[condition.field_uuid] ?? defaultValue)
+      } else if (field?.type === 'number' && ['equal', 'not_equal', 'greater_than', 'less_than'].includes(condition.action)) {
+        const value = this.values[condition.field_uuid] ?? defaultValue
+
+        if (isEmpty(value) || isEmpty(condition.value)) return false
+
+        const actual = parseFloat(value)
+        const expected = parseFloat(condition.value)
+
+        if (Number.isNaN(actual) || Number.isNaN(expected)) return false
+
+        if (condition.action === 'equal') return Math.abs(actual - expected) < Number.EPSILON
+        if (condition.action === 'not_equal') return Math.abs(actual - expected) > Number.EPSILON
+        if (condition.action === 'greater_than') return actual > expected
+        if (condition.action === 'less_than') return actual < expected
+
+        return false
       } else if (['equal', 'contains'].includes(condition.action) && field) {
         if (field.options) {
           const option = field.options.find((o) => o.uuid === condition.value)
-          const values = [this.values[condition.field_uuid] ?? defaultValue].flat()
 
-          return values.includes(this.optionValue(option, field.options.indexOf(option)))
+          if (option) {
+            const values = [this.values[condition.field_uuid] ?? defaultValue].flat()
+
+            return values.includes(this.optionValue(option, field.options.indexOf(option)))
+          } else {
+            return false
+          }
         } else {
           return [this.values[condition.field_uuid] ?? defaultValue].flat().includes(condition.value)
         }
       } else if (['not_equal', 'does_not_contain'].includes(condition.action) && field) {
-        const option = field.options.find((o) => o.uuid === condition.value)
-        const values = [this.values[condition.field_uuid] ?? defaultValue].flat()
+        if (field.options) {
+          const option = field.options.find((o) => o.uuid === condition.value)
 
-        return !values.includes(this.optionValue(option, field.options.indexOf(option)))
+          if (option) {
+            const values = [this.values[condition.field_uuid] ?? defaultValue].flat()
+
+            return !values.includes(this.optionValue(option, field.options.indexOf(option)))
+          } else {
+            return false
+          }
+        } else {
+          return false
+        }
       } else {
         return true
       }
@@ -1264,6 +1495,13 @@ export default {
         return option.value
       } else {
         return `${this.t('option')} ${index + 1}`
+      }
+    },
+    findNextStep (currentStepIndex) {
+      if (this.onlyRequiredFields) {
+        return this.stepFields.find((step, index) => index > currentStepIndex && step.some((f) => f.required))
+      } else {
+        return this.stepFields[currentStepIndex + 1]
       }
     },
     maybeTrackEmailClick () {
@@ -1327,9 +1565,9 @@ export default {
     },
     previousSignatureValueFor (field) {
       if (this.reuseSignature !== false) {
-        const signatureField = [...this.fields].reverse().find((f) =>
-          f.type === 'signature' && field.preferences?.format === f.preferences?.format && !!this.values[f.uuid]
-        )
+        const signatureField = this.fields.findLast
+          ? this.fields.findLast((f) => f.type === 'signature' && field.preferences?.format === f.preferences?.format && !!this.values[f.uuid])
+          : [...this.fields].reverse().find((f) => f.type === 'signature' && field.preferences?.format === f.preferences?.format && !!this.values[f.uuid])
 
         return this.values[signatureField?.uuid]
       } else {
@@ -1337,6 +1575,7 @@ export default {
       }
     },
     goToStep (stepIndex, scrollToArea = false, clickUpload = false) {
+      this.isInvite = false
       this.currentStep = stepIndex
       this.showFillAllRequiredFields = false
 
@@ -1351,7 +1590,7 @@ export default {
           }
 
           this.enableScrollIntoField = false
-          this.$refs.form.querySelector('input[type="date"], input[type="number"], input[type="text"], select')?.focus()
+          this.$refs.form.querySelector('input[type="date"], input[type="number"], input[type="text"], input[type="tel"], textarea, select')?.focus()
           this.enableScrollIntoField = true
 
           if (clickUpload && !this.values[this.currentField.uuid] && ['file', 'image'].includes(this.currentField.type)) {
@@ -1361,6 +1600,10 @@ export default {
       })
     },
     saveStep (formData) {
+      if (!formData && !this.$refs.form) {
+        return
+      }
+
       const currentFieldUuids = this.currentStepFields.map((f) => f.uuid)
       const currentFieldType = this.currentField.type
 
@@ -1379,7 +1622,8 @@ export default {
       } else {
         return fetch(this.baseUrl + this.submitPath, {
           method: 'POST',
-          body: formData || new FormData(this.$refs.form)
+          body: formData || new FormData(this.$refs.form),
+          ...this.fetchOptions
         }).then((response) => {
           if (response.status === 200) {
             currentFieldUuids.forEach((fieldUuid) => {
@@ -1412,7 +1656,7 @@ export default {
         this.isSubmittingComplete = true
       }
 
-      const submitStep = this.currentStep
+      const submitStepIndex = this.currentStep
 
       const stepPromise = ['signature', 'phone', 'initials', 'payment', 'verification', 'kba'].includes(this.currentField.type)
         ? this.$refs.currentStep.submit
@@ -1420,7 +1664,7 @@ export default {
 
       stepPromise().then(async () => {
         const emptyRequiredField = this.stepFields.find((fields, index) => {
-          if (forceComplete ? index === submitStep : index >= submitStep) {
+          if (forceComplete ? index === submitStepIndex : index >= submitStepIndex) {
             return false
           }
 
@@ -1430,7 +1674,7 @@ export default {
         })
 
         const formData = new FormData(this.$refs.form)
-        const isLastStep = (submitStep === this.stepFields.length - 1) || forceComplete
+        const isLastStep = (this.onlyRequiredFields ? !this.findNextStep(submitStepIndex) : (submitStepIndex === this.stepFields.length - 1)) || forceComplete
 
         if (isLastStep && !emptyRequiredField && !this.inviteSubmitters.length && !this.optionalInviteSubmitters.length) {
           formData.append('completed', 'true')
@@ -1474,7 +1718,9 @@ export default {
             return Promise.reject(new Error(data.error))
           }
 
-          const nextStep = (isLastStep && emptyRequiredField) || (forceComplete ? null : this.stepFields[submitStep + 1])
+          this.isFormStarted = true
+
+          const nextStep = (isLastStep && emptyRequiredField) || (forceComplete ? null : this.findNextStep(submitStepIndex))
 
           if (nextStep) {
             if (this.alwaysMinimize) {
@@ -1510,6 +1756,7 @@ export default {
     },
     async performComplete (resp) {
       this.isCompleted = true
+      this.isFormVisible = true
 
       if (resp?.text) {
         const respData = await resp.text()
@@ -1521,6 +1768,15 @@ export default {
 
       if (this.completedRedirectUrl) {
         window.location.href = sanitizeUrl(this.completedRedirectUrl)
+      } else {
+        this.$nextTick(() => {
+          const root = this.$root.$el.parentNode.getRootNode()
+          const completedEl = root.getElementById('form_completed')
+
+          if (completedEl) {
+            completedEl.focus()
+          }
+        })
       }
     }
   }

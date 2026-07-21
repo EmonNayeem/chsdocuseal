@@ -8,11 +8,13 @@ class TemplatesCloneAndReplaceController < ApplicationController
 
     ActiveRecord::Associations::Preloader.new(
       records: [@template],
-      associations: [schema_documents: :preview_images_attachments]
+      associations: [{ schema_documents: :preview_images_attachments }]
     ).call
 
     cloned_template = Templates::Clone.call(@template, author: current_user)
     cloned_template.name = File.basename(params[:files].first.original_filename, '.*')
+
+    authorize!(:create, cloned_template)
 
     Template.transaction do
       cloned_template.save!

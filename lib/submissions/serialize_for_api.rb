@@ -14,6 +14,7 @@ module Submissions
 
     module_function
 
+    # rubocop:disable Metrics
     def call(submission, submitters = nil, params = {}, with_events: true, with_documents: true, with_values: true,
              expires_at: Accounts.link_expires_at(Account.new(id: submission.account_id)))
       submitters ||= submission.submitters.preload(documents_attachments: :blob, attachments_attachments: :blob)
@@ -32,8 +33,12 @@ module Submissions
         json['submission_events'] = Submitters::SerializeForApi.serialize_events(submission.submission_events)
       end
 
-      if submitters.all?(&:completed_at?)
-        last_submitter = submitters.max_by(&:completed_at)
+      if params[:include].to_s.include?('fields')
+        json['fields'] = submission.template_fields || submission.template&.fields
+      end
+
+      if submission.completed_at?
+        last_submitter = submitters.select(&:completed_at?).max_by(&:completed_at)
 
         if with_documents
           json['documents'] = serialized_submitters.find { |e| e['id'] == last_submitter.id }['documents']
@@ -44,7 +49,7 @@ module Submissions
         json['combined_document_url'] ||= maybe_build_combined_url(submitters, submission, params, expires_at:)
 
         json['status'] = 'completed'
-        json['completed_at'] = last_submitter.completed_at.as_json
+        json['completed_at'] = submission.completed_at.as_json
       else
         json['documents'] = [] if with_documents
         json['audit_log_url'] = nil
@@ -57,6 +62,7 @@ module Submissions
 
       json
     end
+    # rubocop:enable Metrics
 
     def build_status(submission, submitters)
       if submitters.any?(&:declined_at?)
@@ -67,12 +73,12 @@ module Submissions
     end
 
     def maybe_build_combined_url(submitters, submission, params, expires_at: nil)
-      return unless submitters.all?(&:completed_at?)
+      return unless submission.completed_at?
 
       attachment = submission.combined_document_attachment
 
       if !attachment && params[:include].to_s.include?('combined_document_url')
-        submitter = submitters.max_by(&:completed_at)
+        submitter = submitters.select(&:completed_at?).max_by(&:completed_at)
 
         attachment = Submissions::EnsureCombinedGenerated.call(submitter)
       end

@@ -35,7 +35,9 @@ module ReplaceEmailVariables
     text = replace(text, TEMPLATE_NAME, html_escape:) do
       (submitter.template || submitter.submission.template || submitter.submission).name
     end
-    text = replace(text, SUBMISSION_NAME, html_escape:) { submitter.submission.name }
+    text = replace(text, SUBMISSION_NAME, html_escape:) do
+      submitter.submission.name.presence || submitter.submission.template&.name
+    end
     text = replace(text, TEMPLATE_ID, html_escape:) { submitter.template.id }
     text = replace(text, SUBMITTER_ID, html_escape:) { submitter.id }
     text = replace(text, SUBMITTER_SLUG, html_escape:) { submitter.slug }
@@ -89,8 +91,10 @@ module ReplaceEmailVariables
   # rubocop:enable Metrics
 
   def build_documents_links_text(submitter, sig = nil)
+    url_options = build_url_options_for(submitter)
+
     Rails.application.routes.url_helpers.submissions_preview_url(
-      submitter.submission.slug, { sig:, **Docuseal.default_url_options }.compact
+      submitter.submission.slug, { sig:, **url_options }.compact
     )
   end
 
@@ -139,14 +143,9 @@ module ReplaceEmailVariables
   end
 
   def build_submitter_link(submitter, tracking_event_type)
-    if tracking_event_type == 'click_email'
-      url_options =
-        if EMAIL_HOST.present?
-          { host: EMAIL_HOST, protocol: ENV['FORCE_SSL'].present? ? 'https' : 'http' }
-        else
-          Docuseal.default_url_options
-        end
+    url_options = build_url_options_for(submitter, is_email: tracking_event_type == 'click_email')
 
+    if tracking_event_type == 'click_email'
       Rails.application.routes.url_helpers.submit_form_url(
         slug: submitter.slug,
         t: SubmissionEvents.build_tracking_param(submitter, 'click_email'),
@@ -156,8 +155,19 @@ module ReplaceEmailVariables
       Rails.application.routes.url_helpers.submit_form_url(
         slug: submitter.slug,
         c: SubmissionEvents.build_tracking_param(submitter, 'click_sms'),
-        **Docuseal.default_url_options
+        **url_options
       )
+    end
+  end
+
+  def build_url_options_for(submitter, is_email: true)
+    if Docuseal.multitenant? &&
+       (config = AccountConfig.find_by(account_id: submitter.account_id, key: :custom_domain))
+      { host: config.value, protocol: 'https' }
+    elsif is_email && EMAIL_HOST.present?
+      { host: EMAIL_HOST, protocol: ENV['FORCE_SSL'].present? ? 'https' : 'http' }
+    else
+      Docuseal.default_url_options
     end
   end
 

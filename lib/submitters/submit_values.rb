@@ -6,6 +6,7 @@ module Submitters
     RequiredFieldError = Class.new(StandardError)
 
     VARIABLE_REGEXP = /\{\{?(\w+)\}\}?/
+    PHONE_REGEXP = /[+\d()\s-]+/
     NONEDITABLE_FIELD_TYPES = %w[stamp heading strikethrough].freeze
 
     STRFTIME_MAP = {
@@ -31,7 +32,11 @@ module Submitters
 
       submitter.submission.save!
 
-      ProcessSubmitterCompletionJob.perform_async('submitter_id' => submitter.id) if submitter.completed_at?
+      if submitter.completed_at?
+        is_last = Submissions.maybe_update_completed_at(submitter.submission)
+
+        ProcessSubmitterCompletionJob.perform_async('submitter_id' => submitter.id, 'is_last' => is_last)
+      end
 
       submitter
     end
@@ -45,10 +50,18 @@ module Submitters
       assign_completed_attributes(submitter, request, validate_required:) if params[:completed] == 'true'
 
       ApplicationRecord.transaction do
-        maybe_set_signature_reason!(values, submitter, params)
-        validate_values!(values, submitter, params, request)
+        reason_field = maybe_set_signature_reason!(values, submitter, params)
+        validate_values!(reason_field ? values.except(reason_field['uuid']) : values, submitter, params, request)
 
-        SubmissionEvents.create_with_tracking_data(submitter, 'complete_form', request) if params[:completed] == 'true'
+        if (touch_attachment_uuid = params[:touch_attachment_uuid].presence)
+          ActiveStorage::Attachment.where(uuid: touch_attachment_uuid, record: submitter).touch_all(:created_at)
+        end
+
+        if params[:completed] == 'true'
+          maybe_invite_via_field(submitter, request)
+
+          SubmissionEvents.create_with_tracking_data(submitter, 'complete_form', request)
+        end
 
         submitter.save!
       end
@@ -77,9 +90,7 @@ module Submitters
         submitter.values = maybe_remove_condition_values(submitter, required_field_uuids_acc:)
       end
 
-      submitter.values = submitter.values.transform_values do |v|
-        v == '{{date}}' ? Time.current.in_time_zone(submitter.account.timezone).to_date.to_s : v
-      end
+      submitter.values = replace_current_date_placeholders(submitter)
 
       required_field_uuids_acc.each do |uuid|
         next if submitter.values[uuid].present?
@@ -98,23 +109,36 @@ module Submitters
       reason_field_uuid = params[:with_reason]
       signature_field_uuid = values.except(reason_field_uuid).keys.first
 
-      signature_field = submitter.submission.template_fields.find { |e| e['uuid'] == signature_field_uuid }
+      signature_field = submitter.submission.template_fields.find do |e|
+        e['uuid'] == signature_field_uuid && e['submitter_uuid'] == submitter.uuid
+      end
 
-      signature_field['preferences'] ||= {}
-      signature_field['preferences']['reason_field_uuid'] = reason_field_uuid
+      reason_field = submitter.submission.template_fields.find do |e|
+        e['uuid'] == reason_field_uuid && e['submitter_uuid'] == submitter.uuid
+      end
 
-      unless submitter.submission.template_fields.find { |e| e['uuid'] == reason_field_uuid }
+      if reason_field
+        if reason_field.dig('preferences', 'signature_field_uuid') != signature_field['uuid']
+          raise ValidationError, 'Invalid field'
+        end
+      else
         reason_field = { 'type' => 'text',
                          'uuid' => reason_field_uuid,
                          'name' => I18n.t(:reason),
                          'readonly' => true,
+                         'preferences' => { 'signature_field_uuid' => signature_field['uuid'] },
                          'submitter_uuid' => submitter.uuid }
 
         submitter.submission.template_fields.insert(submitter.submission.template_fields.index(signature_field) + 1,
                                                     reason_field)
       end
 
+      signature_field['preferences'] ||= {}
+      signature_field['preferences']['reason_field_uuid'] = reason_field_uuid
+
       submitter.submission.save!
+
+      reason_field
     end
 
     def normalized_values(params)
@@ -172,7 +196,7 @@ module Submitters
 
         next if value.blank?
 
-        acc[field['uuid']] = template_default_value_for_submitter(value, submitter, with_time: true)
+        acc[field['uuid']] = template_default_value_for_submitter(value, submitter, field:, with_time: true)
       end
 
       default_values.compact_blank.merge(submitter.values)
@@ -226,7 +250,20 @@ module Submitters
       0
     end
 
-    def template_default_value_for_submitter(value, submitter, with_time: false)
+    def replace_current_date_placeholders(submitter)
+      submitter.values.each_with_object({}) do |(uuid, v), acc|
+        acc[uuid] =
+          if v == '{{date}}'
+            field = submitter.submission.fields_uuid_index[uuid]
+
+            TimeUtils.current_date_value(field&.dig('preferences', 'format'), submitter.account.timezone)
+          else
+            v
+          end
+      end
+    end
+
+    def template_default_value_for_submitter(value, submitter, with_time: false, field: nil)
       return if value.blank?
       return if submitter.blank?
 
@@ -235,7 +272,8 @@ module Submitters
       replace_default_variables(value,
                                 submitter.attributes.merge('role' => role),
                                 submitter.submission,
-                                with_time:)
+                                with_time:,
+                                field:)
     end
 
     def maybe_remove_condition_values(submitter, required_field_uuids_acc: nil)
@@ -248,7 +286,10 @@ module Submitters
 
       attachments_index =
         if has_document_conditions
-          Submissions.filtered_conditions_schema(submission).index_by { |i| i['attachment_uuid'] }
+          submitters_values = merge_submitters_values(submitter)
+
+          Submissions.filtered_conditions_schema(submission, values: submitters_values)
+                     .index_by { |i| i['attachment_uuid'] }
         end
 
       submission.template_fields.each do |field|
@@ -257,8 +298,7 @@ module Submitters
         required_field_uuids_acc.add(field['uuid']) if required_field_uuids_acc && required_editable_field?(field)
 
         if has_document_conditions && !check_field_areas_attachments(field, attachments_index)
-          submitter.values.delete(field['uuid'])
-          required_field_uuids_acc&.delete(field['uuid'])
+          delete_field_value!(field, submitter, submitters_values, required_field_uuids_acc)
         end
 
         if has_other_submitters && !submitters_values &&
@@ -267,12 +307,17 @@ module Submitters
         end
 
         unless check_field_conditions(submitters_values || submitter.values, field, submission.fields_uuid_index)
-          submitter.values.delete(field['uuid'])
-          required_field_uuids_acc&.delete(field['uuid'])
+          delete_field_value!(field, submitter, submitters_values, required_field_uuids_acc)
         end
       end
 
       submitter.values
+    end
+
+    def delete_field_value!(field, submitter, submitters_values = nil, required_field_uuids_acc = nil)
+      submitter.values.delete(field['uuid'])
+      submitters_values&.delete(field['uuid'])
+      required_field_uuids_acc&.delete(field['uuid'])
     end
 
     def submission_has_document_conditions?(submission)
@@ -293,6 +338,7 @@ module Submitters
 
     def merge_submitters_values(submitter)
       submitter.submission.submitters
+               .reject { |sub| sub.uuid == submitter.uuid }
                .reduce({}) { |acc, sub| acc.merge(sub.values) }
                .merge(submitter.values)
     end
@@ -317,30 +363,62 @@ module Submitters
       end.exclude?(false)
     end
 
+    # rubocop:disable Metrics
     def check_field_condition(condition, submitter_values, fields_uuid_index)
+      value = submitter_values[condition['field_uuid']]
+      field = fields_uuid_index[condition['field_uuid']]
+
       case condition['action']
       when 'empty', 'unchecked'
-        submitter_values[condition['field_uuid']].blank?
+        value.blank?
       when 'not_empty', 'checked'
-        submitter_values[condition['field_uuid']].present?
+        value.present?
+      when ->(action) { action == 'equal' && field&.dig('type') == 'number' }
+        return false if value.blank? || condition['value'].blank?
+
+        (value.to_f - condition['value'].to_f).abs < Float::EPSILON
+      when ->(action) { action == 'not_equal' && field&.dig('type') == 'number' }
+        return false if value.blank? || condition['value'].blank?
+
+        (value.to_f - condition['value'].to_f).abs > Float::EPSILON
+      when 'greater_than'
+        return false if field.nil? || value.blank? || condition['value'].blank?
+
+        value.to_f > condition['value'].to_f
+      when 'less_than'
+        return false if field.nil? || value.blank? || condition['value'].blank?
+
+        value.to_f < condition['value'].to_f
       when 'equal', 'contains'
-        field = fields_uuid_index[condition['field_uuid']]
+        return true unless field
+
+        values = Array.wrap(value)
+
+        return values.include?(condition['value']) unless field['options']
+
         option = field['options'].find { |o| o['uuid'] == condition['value'] }
-        values = Array.wrap(submitter_values[condition['field_uuid']])
+
+        return false unless option
 
         values.include?(option['value'].presence || "#{I18n.t('option')} #{field['options'].index(option) + 1}")
       when 'not_equal', 'does_not_contain'
-        field = fields_uuid_index[condition['field_uuid']]
+        return true unless field
+        return false unless field['options']
+
         option = field['options'].find { |o| o['uuid'] == condition['value'] }
-        values = Array.wrap(submitter_values[condition['field_uuid']])
+
+        return false unless option
+
+        values = Array.wrap(value)
 
         values.exclude?(option['value'].presence || "#{I18n.t('option')} #{field['options'].index(option) + 1}")
       else
         true
       end
     end
+    # rubocop:enable Metrics
 
-    def replace_default_variables(value, attrs, submission, with_time: false)
+    def replace_default_variables(value, attrs, submission, with_time: false, field: nil)
       return value if value.in?([true, false]) || value.is_a?(Numeric) || value.is_a?(Array)
       return if value.blank?
 
@@ -358,7 +436,7 @@ module Submitters
         when 'hour', 'minute', 'day', 'month', 'year'
           with_time ? Time.current.in_time_zone(submission.account.timezone).strftime(STRFTIME_MAP[key]) : e
         when 'date'
-          with_time ? Time.current.in_time_zone(submission.account.timezone).to_date.to_s : e
+          with_time ? TimeUtils.current_date_value(field&.dig('preferences', 'format'), submission.account.timezone) : e
         when 'role', 'email', 'phone', 'name'
           attrs[key] || e
         else
@@ -367,7 +445,57 @@ module Submitters
       end
     end
 
-    def validate_value!(_value, _field, _params, _submitter, _request)
+    def maybe_invite_via_field(submitter, request)
+      submission = submitter.submission
+
+      is_invited = false
+
+      submission.template_submitters.each do |s|
+        field_uuid = s['invite_via_field_uuid']
+
+        next if field_uuid.blank?
+
+        field = submission.template_fields.find { |e| e['uuid'] == field_uuid }
+
+        next unless field
+        next unless field['submitter_uuid'] == submitter.uuid
+
+        next if submission.submitters.exists?(uuid: s['uuid'])
+
+        value = submitter.values[field_uuid]
+
+        next if value.blank?
+
+        if value.include?('@')
+          email = Submissions.normalize_email(value)
+        elsif value.match?(PHONE_REGEXP)
+          phone = value.gsub(/[^+\d]/, '')
+        end
+
+        next if email.blank? && phone.blank?
+
+        submission.submitters.create!(uuid: s['uuid'], email:, phone:, account_id: submitter.account_id)
+
+        SubmissionEvents.create_with_tracking_data(submitter, 'invite_party', request, { uuid: submitter.uuid })
+
+        is_invited = true
+      end
+
+      submission.update!(submitters_order: :preserved) if is_invited
+
+      submitter
+    end
+
+    def validate_value!(_value, field, _params, submitter, _request)
+      raise ValidationError, 'Missing field' unless field
+      raise ValidationError, 'Invalid field' if field['submitter_uuid'] != submitter.uuid
+
+      if field['readonly'] == true
+        Rollbar.warning("Readonly field #{submitter.id}: #{field['uuid']}") if defined?(Rollbar)
+
+        raise ValidationError, 'Read-only field'
+      end
+
       true
     end
   end

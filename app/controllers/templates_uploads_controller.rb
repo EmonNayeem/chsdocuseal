@@ -5,14 +5,16 @@ class TemplatesUploadsController < ApplicationController
 
   layout 'plain'
 
-  def show; end
+  def show
+    redirect_to root_path if params[:url].blank?
+  end
 
   def create
     url_params = create_file_params_from_url if params[:url].present?
 
     save_template!(@template, url_params)
 
-    documents = Templates::CreateAttachments.call(@template, url_params || params, extract_fields: true)
+    documents, = Templates::CreateAttachments.call(@template, url_params || params, extract_fields: true)
     schema = documents.map { |doc| { attachment_uuid: doc.uuid, name: doc.filename.base } }
 
     if @template.fields.blank?
@@ -59,7 +61,7 @@ class TemplatesUploadsController < ApplicationController
   def create_file_params_from_url
     tempfile = Tempfile.new
     tempfile.binmode
-    tempfile.write(DownloadUtils.call(params[:url]).body)
+    tempfile.write(DownloadUtils.call(params[:url], validate: true).body)
     tempfile.rewind
 
     filename = URI.decode_www_form_component(params[:filename]) if params[:filename].present?

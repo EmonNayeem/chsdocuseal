@@ -42,6 +42,7 @@
       {{ error }}
     </div>
     <button
+      type="button"
       class="base-button w-full flex justify-center submit-form-button"
       @click="restartKba"
     >
@@ -497,9 +498,9 @@ export default {
           body: JSON.stringify(payload)
         })
 
-        if (!resp.ok) throw new Error('Failed to start KBA')
-
         const data = await resp.json()
+
+        if (!resp.ok) throw new Error(data.error || 'Failed to start KBA')
 
         if (data.result && data.result.action === 'FAIL') {
           if (data.result.detail === 'NO MATCH') {
@@ -555,7 +556,11 @@ export default {
         const data = await resp.json()
 
         if (data.result?.action !== 'PASS') {
-          this.error = 'Knowledge Based Authentication Failed - make sure you provide correct answers for the Knowledge Based authentication.'
+          if (data.result?.issues?.length) {
+            this.error = `Knowledge Based Authentication Failed - make sure you provide correct details for the Knowledge Based authentication: ${data.result.issues.join(', ')}`
+          } else {
+            this.error = 'Knowledge Based Authentication Failed - make sure you provide correct answers for the Knowledge Based authentication.'
+          }
 
           throw new Error('Knowledge Based Authentication Failed')
         }
