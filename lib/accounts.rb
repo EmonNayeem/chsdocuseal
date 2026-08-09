@@ -5,13 +5,37 @@ module Accounts
 
   module_function
 
+  def ensure_default_companies!(account)
+    Company.find_or_create_by!(account_id: account.id, code: 'MD') do |c|
+      c.name = 'Materials Direct'
+      c.active = true
+    end
+    Company.find_or_create_by!(account_id: account.id, code: 'CHS') do |c|
+      c.name = 'Churchfield Home Services'
+      c.active = true
+    end
+    Company.find_or_create_by!(account_id: account.id, code: 'SL') do |c|
+      c.name = 'Smart Lotto'
+      c.active = true
+    end
+    Company.find_or_create_by!(account_id: account.id, code: 'ESS') do |c|
+      c.name = 'Efficient Software Solutions'
+      c.active = true
+    end
+  end
+
   def create_duplicate(account)
     new_account = account.dup
+    new_account.save!
+
+    ensure_default_companies!(new_account)
+    md_company = new_account.companies.find_by!(code: 'MD')
 
     new_user = account.users.first.dup
 
     new_user.uuid = SecureRandom.uuid
     new_user.account = new_account
+    new_user.company_id = md_company.id
     new_user.encrypted_password = SecureRandom.hex
     new_user.email = "#{SecureRandom.hex}@docuseal.com"
 
@@ -19,6 +43,7 @@ module Accounts
       new_template = template.dup
 
       new_template.account = new_account
+      new_template.company_id = md_company.id
       new_template.slug = SecureRandom.base58(14)
 
       new_template.archived_at = nil
@@ -54,6 +79,8 @@ module Accounts
 
     ApplicationRecord.transaction do
       account.testing_accounts << testing_account
+
+      ensure_default_companies!(testing_account)
 
       original_email = account.users.order(:id).first.email
       test_email = generate_unique_test_email(original_email)

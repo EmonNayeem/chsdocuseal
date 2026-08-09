@@ -24,9 +24,13 @@ module SubmissionEvents
   def populate_account_id
     Account.find_each do |account|
       ids = account.submissions.pluck(:id)
+      md_company = account.companies.find_by!(code: 'MD')
 
       ids.each_slice(10_000).each do |batch|
-        SubmissionEvent.where(submission_id: batch).update_all(account_id: account.id)
+        SubmissionEvent.where(submission_id: batch).update_all(
+          account_id: account.id,
+          company_id: md_company.id
+        )
       end
     end
   end
