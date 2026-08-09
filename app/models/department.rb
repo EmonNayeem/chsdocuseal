@@ -23,6 +23,7 @@
 #  fk_rails_...  (company_id => companies.id)
 #
 class Department < ApplicationRecord
+  before_validation :assign_company_from_parent, on: :create
   belongs_to :account
   belongs_to :company
 
@@ -41,5 +42,10 @@ class Department < ApplicationRecord
 
   def normalize_name
     self.name = name.to_s.strip.presence
+  end
+  private
+
+  def assign_company_from_parent
+    self.company_id ||= account&.companies&.find_by(code: 'MD')&.id
   end
 end

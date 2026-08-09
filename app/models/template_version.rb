@@ -29,6 +29,7 @@
 #  fk_rails_...  (template_id => templates.id)
 #
 class TemplateVersion < ApplicationRecord
+  before_validation :assign_company_from_parent, on: :create
   belongs_to :template
   belongs_to :account
   belongs_to :company
@@ -44,5 +45,10 @@ class TemplateVersion < ApplicationRecord
 
   def set_account
     self.account ||= template.account
+  end
+  private
+
+  def assign_company_from_parent
+    self.company_id ||= template&.company_id || author&.company_id || account&.companies&.find_by(code: 'MD')&.id
   end
 end

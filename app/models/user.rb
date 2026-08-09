@@ -51,6 +51,7 @@
 #  fk_rails_...  (company_id => companies.id)
 #
 class User < ApplicationRecord
+  before_validation :assign_company_from_parent, on: :create
   ADMIN_ROLE = 'admin'
   EDITOR_ROLE = 'editor'
   VIEWER_ROLE = 'viewer'
@@ -133,5 +134,10 @@ class User < ApplicationRecord
 
   def department_acl_admin?
     role == ADMIN_ROLE
+  end
+  private
+
+  def assign_company_from_parent
+    self.company_id ||= account&.companies&.find_by(code: 'MD')&.id
   end
 end

@@ -32,6 +32,7 @@
 #  fk_rails_...  (submitter_id => submitters.id)
 #
 class SubmissionEvent < ApplicationRecord
+  before_validation :assign_company_from_parent, on: :create
   belongs_to :submission
   has_one :account, through: :submission
   belongs_to :company, optional: true
@@ -80,5 +81,10 @@ class SubmissionEvent < ApplicationRecord
 
   def set_account_id
     self.account_id = submitter&.account_id
+  end
+  private
+
+  def assign_company_from_parent
+    self.company_id ||= submission&.company_id || submitter&.company_id
   end
 end

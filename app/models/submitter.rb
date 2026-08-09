@@ -43,6 +43,7 @@
 #  fk_rails_...  (submission_id => submissions.id)
 #
 class Submitter < ApplicationRecord
+  before_validation :assign_company_from_parent, on: :create
   belongs_to :submission
   belongs_to :account
   belongs_to :company
@@ -132,5 +133,10 @@ class Submitter < ApplicationRecord
     email_events.each do |event|
       event.update!(email: Digest::MD5.base64digest(event.email))
     end
+  end
+  private
+
+  def assign_company_from_parent
+    self.company_id ||= submission&.company_id || account&.companies&.find_by(code: 'MD')&.id
   end
 end

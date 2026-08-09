@@ -42,6 +42,7 @@
 #  fk_rails_...  (folder_id => template_folders.id)
 #
 class Template < ApplicationRecord
+  before_validation :assign_company_from_parent, on: :create
   DEFAULT_SUBMITTER_NAME = 'First Party'
 
   belongs_to :author, class_name: 'User'
@@ -102,5 +103,10 @@ class Template < ApplicationRecord
 
   def maybe_set_default_folder
     self.folder ||= account.default_template_folder
+  end
+  private
+
+  def assign_company_from_parent
+    self.company_id ||= author&.company_id || account&.companies&.find_by(code: 'MD')&.id
   end
 end
