@@ -26,6 +26,7 @@ class UserDepartment < ApplicationRecord
 
   validates :user_id, uniqueness: { scope: :department_id }
   validate :same_account
+  validate :same_company
 
   private
 
@@ -34,5 +35,13 @@ class UserDepartment < ApplicationRecord
     return if user.account_id == department.account_id
 
     errors.add(:department, 'must belong to the same account as the user')
+  end
+
+  def same_company
+    return if user.blank? || department.blank?
+    return if user.platform_admin?
+    return if user.company_id == department.company_id
+
+    errors.add(:department, 'must belong to the same company as the user')
   end
 end

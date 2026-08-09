@@ -11,18 +11,21 @@
 #  updated_at       :datetime         not null
 #  account_id       :bigint           not null
 #  author_id        :bigint           not null
+#  company_id       :bigint           not null
 #  parent_folder_id :bigint
 #
 # Indexes
 #
 #  index_template_folders_on_account_id        (account_id)
 #  index_template_folders_on_author_id         (author_id)
+#  index_template_folders_on_company_id        (company_id)
 #  index_template_folders_on_parent_folder_id  (parent_folder_id)
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (author_id => users.id)
+#  fk_rails_...  (company_id => companies.id)
 #  fk_rails_...  (parent_folder_id => template_folders.id)
 #
 class TemplateFolder < ApplicationRecord
@@ -30,6 +33,7 @@ class TemplateFolder < ApplicationRecord
 
   belongs_to :author, class_name: 'User'
   belongs_to :account
+  belongs_to :company
   belongs_to :parent_folder, class_name: 'TemplateFolder', optional: true
 
   has_many :templates, dependent: :destroy, foreign_key: :folder_id, inverse_of: :folder

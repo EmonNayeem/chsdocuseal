@@ -11,12 +11,14 @@
 #  created_at      :datetime         not null
 #  updated_at      :datetime         not null
 #  account_id      :bigint
+#  company_id      :bigint
 #  submission_id   :bigint           not null
 #  submitter_id    :bigint
 #
 # Indexes
 #
 #  index_submission_events_on_account_id        (account_id)
+#  index_submission_events_on_company_id        (company_id)
 #  index_submission_events_on_created_at        (created_at)
 #  index_submission_events_on_submission_id     (submission_id)
 #  index_submission_events_on_submitter_id      (submitter_id)
@@ -25,12 +27,14 @@
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (company_id => companies.id)
 #  fk_rails_...  (submission_id => submissions.id)
 #  fk_rails_...  (submitter_id => submitters.id)
 #
 class SubmissionEvent < ApplicationRecord
   belongs_to :submission
   has_one :account, through: :submission
+  belongs_to :company, optional: true
   belongs_to :submitter, optional: true
 
   attribute :data, :string, default: -> { {} }

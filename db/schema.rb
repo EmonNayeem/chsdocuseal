@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
+ActiveRecord::Schema[8.1].define(version: 2026_07_10_115107) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -98,6 +98,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "companies", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.boolean "active", default: true, null: false
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "code"], name: "index_companies_on_account_id_and_code", unique: true
+    t.index ["account_id", "name"], name: "index_companies_on_account_id_and_name", unique: true
+    t.index ["account_id"], name: "index_companies_on_account_id"
+  end
+
   create_table "completed_documents", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "sha256", null: false
@@ -161,11 +173,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
 
   create_table "departments", force: :cascade do |t|
     t.bigint "account_id", null: false
+    t.bigint "company_id", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.datetime "updated_at", null: false
-    t.index ["account_id", "name"], name: "index_departments_on_account_id_and_name", unique: true
     t.index ["account_id"], name: "index_departments_on_account_id"
+    t.index ["company_id", "name"], name: "index_departments_on_company_id_and_name", unique: true
+    t.index ["company_id"], name: "index_departments_on_company_id"
   end
 
   create_table "document_generation_events", force: :cascade do |t|
@@ -350,6 +364,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
 
   create_table "submission_events", force: :cascade do |t|
     t.bigint "account_id"
+    t.bigint "company_id"
     t.datetime "created_at", null: false
     t.text "data", null: false
     t.datetime "event_timestamp", null: false
@@ -359,6 +374,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.datetime "updated_at", null: false
     t.index ["account_id", "created_at"], name: "index_submissions_events_on_sms_event_types", where: "((event_type)::text = ANY (ARRAY[('send_sms'::character varying)::text, ('send_2fa_sms'::character varying)::text]))"
     t.index ["account_id"], name: "index_submission_events_on_account_id"
+    t.index ["company_id"], name: "index_submission_events_on_company_id"
     t.index ["created_at"], name: "index_submission_events_on_created_at"
     t.index ["submission_id"], name: "index_submission_events_on_submission_id"
     t.index ["submitter_id"], name: "index_submission_events_on_submitter_id"
@@ -367,6 +383,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
   create_table "submissions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.datetime "archived_at"
+    t.bigint "company_id", null: false
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.bigint "created_by_user_id"
@@ -388,6 +405,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.index ["account_id", "id"], name: "index_submissions_on_account_id_and_id_pending", where: "((completed_at IS NULL) AND (archived_at IS NULL))"
     t.index ["account_id", "template_id", "id"], name: "index_submissions_on_account_id_and_template_id_and_id", where: "(archived_at IS NULL)"
     t.index ["account_id", "template_id", "id"], name: "index_submissions_on_account_id_and_template_id_and_id_archived", where: "(archived_at IS NOT NULL)"
+    t.index ["company_id"], name: "index_submissions_on_company_id"
     t.index ["created_at"], name: "index_submissions_on_created_at"
     t.index ["created_by_user_id"], name: "index_submissions_on_created_by_user_id"
     t.index ["slug"], name: "index_submissions_on_slug", unique: true
@@ -408,6 +426,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
 
   create_table "submitters", force: :cascade do |t|
     t.bigint "account_id", null: false
+    t.bigint "company_id", null: false
     t.datetime "completed_at"
     t.datetime "created_at", null: false
     t.datetime "declined_at"
@@ -429,6 +448,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.text "values", null: false
     t.index ["account_id", "completed_at"], name: "index_submitters_on_account_id_and_completed_at", where: "(completed_at IS NOT NULL)"
     t.index ["account_id", "id"], name: "index_submitters_on_account_id_and_id"
+    t.index ["company_id"], name: "index_submitters_on_company_id"
     t.index ["email"], name: "index_submitters_on_email"
     t.index ["external_id"], name: "index_submitters_on_external_id"
     t.index ["slug"], name: "index_submitters_on_slug", unique: true
@@ -456,12 +476,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.bigint "account_id", null: false
     t.datetime "archived_at"
     t.bigint "author_id", null: false
+    t.bigint "company_id", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.bigint "parent_folder_id"
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_template_folders_on_account_id"
     t.index ["author_id"], name: "index_template_folders_on_author_id"
+    t.index ["company_id"], name: "index_template_folders_on_company_id"
     t.index ["parent_folder_id"], name: "index_template_folders_on_parent_folder_id"
   end
 
@@ -478,6 +500,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
   create_table "template_versions", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.bigint "author_id", null: false
+    t.bigint "company_id", null: false
     t.datetime "created_at", null: false
     t.text "data", null: false
     t.string "sha1", null: false
@@ -485,6 +508,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.datetime "updated_at", null: false
     t.index ["account_id"], name: "index_template_versions_on_account_id"
     t.index ["author_id"], name: "index_template_versions_on_author_id"
+    t.index ["company_id"], name: "index_template_versions_on_company_id"
     t.index ["template_id", "sha1"], name: "index_template_versions_on_template_id_and_sha1", unique: true
   end
 
@@ -492,6 +516,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.bigint "account_id", null: false
     t.datetime "archived_at"
     t.bigint "author_id", null: false
+    t.bigint "company_id", null: false
     t.datetime "created_at", null: false
     t.string "external_id"
     t.text "fields", null: false
@@ -509,6 +534,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.index ["account_id", "id"], name: "index_templates_on_account_id_and_id_archived", where: "(archived_at IS NOT NULL)"
     t.index ["account_id"], name: "index_templates_on_account_id"
     t.index ["author_id"], name: "index_templates_on_author_id"
+    t.index ["company_id"], name: "index_templates_on_company_id"
     t.index ["external_id"], name: "index_templates_on_external_id"
     t.index ["folder_id"], name: "index_templates_on_folder_id"
     t.index ["slug"], name: "index_templates_on_slug", unique: true
@@ -536,6 +562,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
   create_table "users", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.datetime "archived_at"
+    t.bigint "company_id", null: false
     t.datetime "confirmation_sent_at"
     t.string "confirmation_token"
     t.datetime "confirmed_at"
@@ -553,6 +580,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.datetime "locked_at"
     t.boolean "otp_required_for_login", default: false, null: false
     t.string "otp_secret"
+    t.boolean "platform_admin", default: false, null: false
     t.datetime "remember_created_at"
     t.datetime "reset_password_sent_at"
     t.string "reset_password_token"
@@ -563,6 +591,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
     t.datetime "updated_at", null: false
     t.string "uuid", null: false
     t.index ["account_id"], name: "index_users_on_account_id"
+    t.index ["company_id"], name: "index_users_on_company_id"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_users_on_reset_password_token", unique: true
     t.index ["unlock_token"], name: "index_users_on_unlock_token", unique: true
@@ -614,7 +643,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
   add_foreign_key "account_linked_accounts", "accounts", column: "linked_account_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "companies", "accounts"
   add_foreign_key "departments", "accounts"
+  add_foreign_key "departments", "companies"
   add_foreign_key "document_generation_events", "submitters"
   add_foreign_key "document_metadata", "accounts"
   add_foreign_key "dynamic_document_versions", "dynamic_documents"
@@ -631,28 +662,35 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_10_115106) do
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
   add_foreign_key "submission_events", "accounts"
+  add_foreign_key "submission_events", "companies"
   add_foreign_key "submission_events", "submissions"
   add_foreign_key "submission_events", "submitters"
+  add_foreign_key "submissions", "companies"
   add_foreign_key "submissions", "templates"
   add_foreign_key "submissions", "users", column: "created_by_user_id"
   add_foreign_key "submitter_versions", "submitters"
+  add_foreign_key "submitters", "companies"
   add_foreign_key "submitters", "submissions"
   add_foreign_key "template_accesses", "templates"
   add_foreign_key "template_departments", "departments", on_delete: :cascade
   add_foreign_key "template_departments", "templates", on_delete: :cascade
   add_foreign_key "template_folders", "accounts"
+  add_foreign_key "template_folders", "companies"
   add_foreign_key "template_folders", "template_folders", column: "parent_folder_id"
   add_foreign_key "template_folders", "users", column: "author_id"
   add_foreign_key "template_sharings", "templates"
   add_foreign_key "template_versions", "accounts"
+  add_foreign_key "template_versions", "companies"
   add_foreign_key "template_versions", "templates"
   add_foreign_key "template_versions", "users", column: "author_id"
   add_foreign_key "templates", "accounts"
+  add_foreign_key "templates", "companies"
   add_foreign_key "templates", "template_folders", column: "folder_id"
   add_foreign_key "templates", "users", column: "author_id"
   add_foreign_key "user_configs", "users"
   add_foreign_key "user_departments", "departments", on_delete: :cascade
   add_foreign_key "user_departments", "users", on_delete: :cascade
   add_foreign_key "users", "accounts"
+  add_foreign_key "users", "companies"
   add_foreign_key "webhook_urls", "accounts"
 end

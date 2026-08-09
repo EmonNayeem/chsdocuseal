@@ -23,6 +23,7 @@
 #  created_at    :datetime         not null
 #  updated_at    :datetime         not null
 #  account_id    :bigint           not null
+#  company_id    :bigint           not null
 #  external_id   :string
 #  submission_id :bigint           not null
 #
@@ -30,6 +31,7 @@
 #
 #  index_submitters_on_account_id_and_completed_at  (account_id,completed_at) WHERE (completed_at IS NOT NULL)
 #  index_submitters_on_account_id_and_id            (account_id,id)
+#  index_submitters_on_company_id                   (company_id)
 #  index_submitters_on_email                        (email)
 #  index_submitters_on_external_id                  (external_id)
 #  index_submitters_on_slug                         (slug) UNIQUE
@@ -37,11 +39,13 @@
 #
 # Foreign Keys
 #
+#  fk_rails_...  (company_id => companies.id)
 #  fk_rails_...  (submission_id => submissions.id)
 #
 class Submitter < ApplicationRecord
   belongs_to :submission
   belongs_to :account
+  belongs_to :company
   has_one :template, through: :submission
   has_one :search_entry, as: :record, inverse_of: :record, dependent: :destroy if SearchEntry.table_exists?
   has_many :submitter_versions, dependent: :destroy

@@ -11,23 +11,27 @@
 #  updated_at  :datetime         not null
 #  account_id  :bigint           not null
 #  author_id   :bigint           not null
+#  company_id  :bigint           not null
 #  template_id :bigint           not null
 #
 # Indexes
 #
 #  index_template_versions_on_account_id            (account_id)
 #  index_template_versions_on_author_id             (author_id)
+#  index_template_versions_on_company_id            (company_id)
 #  index_template_versions_on_template_id_and_sha1  (template_id,sha1) UNIQUE
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (author_id => users.id)
+#  fk_rails_...  (company_id => companies.id)
 #  fk_rails_...  (template_id => templates.id)
 #
 class TemplateVersion < ApplicationRecord
   belongs_to :template
   belongs_to :account
+  belongs_to :company
   belongs_to :author, class_name: 'User'
 
   attribute :data, :string, default: -> { {} }

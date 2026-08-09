@@ -9,18 +9,22 @@
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
 #  account_id :bigint           not null
+#  company_id :bigint           not null
 #
 # Indexes
 #
 #  index_departments_on_account_id           (account_id)
-#  index_departments_on_account_id_and_name  (account_id,name) UNIQUE
+#  index_departments_on_company_id           (company_id)
+#  index_departments_on_company_id_and_name  (company_id,name) UNIQUE
 #
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (company_id => companies.id)
 #
 class Department < ApplicationRecord
   belongs_to :account
+  belongs_to :company
 
   has_many :user_departments, dependent: :restrict_with_error
   has_many :users, through: :user_departments
@@ -31,7 +35,7 @@ class Department < ApplicationRecord
   before_validation :normalize_name
 
   validates :name, presence: true
-  validates :name, uniqueness: { scope: :account_id, case_sensitive: false }
+  validates :name, uniqueness: { scope: :company_id, case_sensitive: false }
 
   private
 

@@ -26,6 +26,7 @@ class TemplateDepartment < ApplicationRecord
 
   validates :template_id, uniqueness: { scope: :department_id }
   validate :same_account
+  validate :same_company
 
   private
 
@@ -34,5 +35,12 @@ class TemplateDepartment < ApplicationRecord
     return if template.account_id == department.account_id
 
     errors.add(:department, 'must belong to the same account as the template')
+  end
+
+  def same_company
+    return if template.blank? || department.blank?
+    return if template.company_id == department.company_id
+
+    errors.add(:department, 'must belong to the same company as the template')
   end
 end

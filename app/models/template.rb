@@ -19,6 +19,7 @@
 #  updated_at       :datetime         not null
 #  account_id       :bigint           not null
 #  author_id        :bigint           not null
+#  company_id       :bigint           not null
 #  external_id      :string
 #  folder_id        :bigint           not null
 #
@@ -28,6 +29,7 @@
 #  index_templates_on_account_id_and_folder_id_and_id  (account_id,folder_id,id) WHERE (archived_at IS NULL)
 #  index_templates_on_account_id_and_id_archived       (account_id,id) WHERE (archived_at IS NOT NULL)
 #  index_templates_on_author_id                        (author_id)
+#  index_templates_on_company_id                       (company_id)
 #  index_templates_on_external_id                      (external_id)
 #  index_templates_on_folder_id                        (folder_id)
 #  index_templates_on_slug                             (slug) UNIQUE
@@ -36,6 +38,7 @@
 #
 #  fk_rails_...  (account_id => accounts.id)
 #  fk_rails_...  (author_id => users.id)
+#  fk_rails_...  (company_id => companies.id)
 #  fk_rails_...  (folder_id => template_folders.id)
 #
 class Template < ApplicationRecord
@@ -43,6 +46,7 @@ class Template < ApplicationRecord
 
   belongs_to :author, class_name: 'User'
   belongs_to :account
+  belongs_to :company
   belongs_to :folder, class_name: 'TemplateFolder'
 
   has_one :search_entry, as: :record, inverse_of: :record, dependent: :destroy if SearchEntry.table_exists?

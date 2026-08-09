@@ -22,6 +22,7 @@
 #  locked_at              :datetime
 #  otp_required_for_login :boolean          default(FALSE), not null
 #  otp_secret             :string
+#  platform_admin         :boolean          default(FALSE), not null
 #  remember_created_at    :datetime
 #  reset_password_sent_at :datetime
 #  reset_password_token   :string
@@ -33,10 +34,12 @@
 #  created_at             :datetime         not null
 #  updated_at             :datetime         not null
 #  account_id             :bigint           not null
+#  company_id             :bigint           not null
 #
 # Indexes
 #
 #  index_users_on_account_id            (account_id)
+#  index_users_on_company_id            (company_id)
 #  index_users_on_email                 (email) UNIQUE
 #  index_users_on_reset_password_token  (reset_password_token) UNIQUE
 #  index_users_on_unlock_token          (unlock_token) UNIQUE
@@ -45,6 +48,7 @@
 # Foreign Keys
 #
 #  fk_rails_...  (account_id => accounts.id)
+#  fk_rails_...  (company_id => companies.id)
 #
 class User < ApplicationRecord
   ADMIN_ROLE = 'admin'
@@ -62,6 +66,7 @@ class User < ApplicationRecord
   has_one_attached :initials
 
   belongs_to :account
+  belongs_to :company
   has_one :access_token, dependent: :destroy
   has_many :access_tokens, dependent: :destroy
   has_many :mcp_tokens, dependent: :destroy
