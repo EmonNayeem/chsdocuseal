@@ -135,6 +135,35 @@ class User < ApplicationRecord
   def department_acl_admin?
     role == ADMIN_ROLE
   end
+
+  def company_admin?
+    role == ADMIN_ROLE && !platform_admin?
+  end
+
+  def admin_or_platform_admin?
+    role == ADMIN_ROLE || platform_admin?
+  end
+
+  def can_access_company?(company_or_company_id)
+    return true if platform_admin?
+    return false if company_or_company_id.blank?
+
+    target_id = company_or_company_id.is_a?(Company) ? company_or_company_id.id : company_or_company_id
+    company_id.to_s == target_id.to_s
+  end
+
+  def same_company_as?(record)
+    return true if platform_admin?
+    return false if record.blank?
+
+    if record.respond_to?(:company_id)
+      company_id == record.company_id
+    elsif record.is_a?(Company)
+      company_id == record.id
+    else
+      false
+    end
+  end
   private
 
   def assign_company_from_parent
