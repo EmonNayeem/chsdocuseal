@@ -5,17 +5,19 @@ class DepartmentsController < ApplicationController
   before_action :set_department, only: %i[edit update destroy]
 
   def index
-    @departments = current_account.departments.order(:name).preload(:users, :templates)
+    @departments = departments_scope.order(:name).preload(:users, :templates)
   end
 
   def new
     @department = current_account.departments.new
+    @department.company = current_user.company
   end
 
   def edit; end
 
   def create
     @department = current_account.departments.new(department_params)
+    @department.company = current_user.company
 
     if @department.save
       redirect_to settings_departments_path, notice: 'Department has been created.'
@@ -44,12 +46,20 @@ class DepartmentsController < ApplicationController
 
   private
 
+  def departments_scope
+    if current_user.platform_admin?
+      current_account.departments
+    else
+      current_account.departments.where(company_id: current_user.company_id)
+    end
+  end
+
   def authorize_department_management!
     authorize! :manage, Department
   end
 
   def set_department
-    @department = current_account.departments.find(params[:id])
+    @department = departments_scope.find(params[:id])
   end
 
   def department_params

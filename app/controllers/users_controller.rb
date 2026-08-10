@@ -17,7 +17,9 @@ class UsersController < ApplicationController
         @users.active.where.not(role: 'integration')
       end
 
-    @users = @users.preload(:departments, account: :account_accesses).where(account: current_account).order(id: :desc)
+    @users = @users.preload(:departments, account: :account_accesses).where(account: current_account)
+    @users = @users.where(company_id: current_user.company_id) unless current_user.platform_admin?
+    @users = @users.order(id: :desc)
 
     respond_to do |format|
       format.html do
@@ -106,12 +108,21 @@ class UsersController < ApplicationController
 
   private
 
+  def assignable_departments_scope
+    if current_user.platform_admin?
+      current_account.departments
+    else
+      current_account.departments.where(company_id: current_user.company_id)
+    end
+  end
+
   def role_valid?(role)
     User::ROLES.include?(role)
   end
 
   def build_user
     @user = current_account.users.new(user_params)
+    @user.company = current_user.company
   end
 
   def user_params
@@ -128,7 +139,7 @@ class UsersController < ApplicationController
     
 
   def load_departments
-    @available_departments = current_account.departments.order(:name)
+    @available_departments = assignable_departments_scope.order(:name)
   end
 
   def assign_user_departments(user)
@@ -142,7 +153,7 @@ class UsersController < ApplicationController
 
     return unless params[:user].key?(:department_ids)
 
-    department_ids = current_account.departments
+    department_ids = assignable_departments_scope
                                     .where(id: Array(params.dig(:user, :department_ids)).reject(&:blank?))
                                     .pluck(:id)
 
