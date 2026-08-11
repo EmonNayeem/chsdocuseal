@@ -69,10 +69,13 @@ class TemplateFoldersController < ApplicationController
   end
 
   def load_related_submissions(template_folder)
+    templates_scope = current_account.templates.active
+    templates_scope = templates_scope.where(company_id: current_user.company_id) unless current_user.platform_admin?
+
     related_submissions =
       Submission.accessible_by(current_ability)
                 .where(archived_at: nil)
-                .where(template_id: current_account.templates.active
+                .where(template_id: templates_scope
                                                    .where(folder: [template_folder, *template_folder.subfolders])
                                                    .select(:id))
                 .preload(:template_accesses, :created_by_user,

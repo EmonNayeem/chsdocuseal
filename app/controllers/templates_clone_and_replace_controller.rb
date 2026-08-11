@@ -13,6 +13,7 @@ class TemplatesCloneAndReplaceController < ApplicationController
 
     cloned_template = Templates::Clone.call(@template, author: current_user)
     cloned_template.name = File.basename(params[:files].first.original_filename, '.*')
+    cloned_template.company = current_user.company
 
     authorize!(:create, cloned_template)
 

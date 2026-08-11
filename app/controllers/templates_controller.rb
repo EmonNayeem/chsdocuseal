@@ -7,7 +7,11 @@ class TemplatesController < ApplicationController
     submitted_ids = Array(raw_ids).reject(&:blank?)
 
     if current_user.department_acl_admin?
-      current_account.departments.where(id: submitted_ids).pluck(:id)
+      if current_user.platform_admin?
+        current_account.departments.where(id: submitted_ids).pluck(:id)
+      else
+        current_account.departments.where(id: submitted_ids, company_id: current_user.company_id).pluck(:id)
+      end
     elsif submitted_ids.present?
       current_user.departments.where(id: submitted_ids).pluck(:id)
     else
@@ -49,6 +53,7 @@ class TemplatesController < ApplicationController
     @template.author = current_user
     @template.folder = TemplateFolders.find_or_create_by_name(current_user, params[:folder_name])
     @template.account = current_account
+    @template.company = current_user.company
 
     Templates.maybe_assign_access(@template)
 

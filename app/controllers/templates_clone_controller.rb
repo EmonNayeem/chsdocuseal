@@ -29,6 +29,8 @@ class TemplatesCloneController < ApplicationController
       @template.account = current_account
     end
 
+    @template.company = current_user.company
+
     Templates.maybe_assign_access(@template)
 
     if @template.save
