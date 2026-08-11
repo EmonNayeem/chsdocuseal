@@ -110,7 +110,7 @@ class Submission < ApplicationRecord
   scope :expired, -> { where(expire_at: ..Time.current).where(completed_at: nil) }
 
   scope :select_for_list, lambda {
-    select(:id, :name, :created_by_user_id, :account_id, :completed_at,
+    select(:id, :name, :created_by_user_id, :account_id, :company_id, :completed_at,
            :created_at, :archived_at, :expire_at, :template_id, :template_submitters)
   }
 
