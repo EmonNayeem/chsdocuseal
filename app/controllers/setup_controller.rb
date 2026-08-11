@@ -10,25 +10,40 @@ class SetupController < ApplicationController
 
   def index
     @account = Account.new(account_params)
-    @user = @account.users.new(user_params)
+    @user = User.new(user_params)
     @encrypted_config = EncryptedConfig.new(account: @account, key: EncryptedConfig::APP_URL_KEY)
   end
 
   def create
     @account = Account.new(account_params)
     @account.timezone = Accounts.normalize_timezone(@account.timezone)
-    @user = @account.users.new(user_params)
+    @user = User.new(user_params)
     @encrypted_config = EncryptedConfig.new(encrypted_config_params)
 
     unless URI.parse(encrypted_config_params[:value].to_s).class.in?([URI::HTTP, URI::HTTPS])
       @encrypted_config.errors.add(:value, I18n.t('should_be_a_valid_url'))
-
+      @account.valid?
+      @user.valid?
       return render :index, status: :unprocessable_content
     end
 
-    return render :index, status: :unprocessable_content unless @account.valid?
+    success = Account.transaction do
+      if @account.save
+        Accounts.ensure_default_companies!(@account)
+        @user.account = @account
+        @user.company_id = @account.companies.find_by!(code: 'MD').id
 
-    if @user.save
+        if @user.save
+          true
+        else
+          raise ActiveRecord::Rollback
+        end
+      else
+        raise ActiveRecord::Rollback
+      end
+    end
+
+    if success
       encrypted_configs = [
         { key: EncryptedConfig::APP_URL_KEY, value: encrypted_config_params[:value] },
         { key: EncryptedConfig::ESIGN_CERTS_KEY, value: GenerateCertificate.call.transform_values(&:to_pem) }
@@ -42,6 +57,7 @@ class SetupController < ApplicationController
 
       redirect_to newsletter_path
     else
+      @user.valid? if @user.errors.empty?
       render :index, status: :unprocessable_content
     end
   end
