@@ -5,6 +5,7 @@ class UsersController < ApplicationController
 
   before_action :build_user, only: %i[new create]
   before_action :load_departments, only: %i[new edit create update]
+  before_action :load_companies, only: %i[new edit create update]
   authorize_resource :user, only: %i[new create]
 
   def index
@@ -122,7 +123,7 @@ class UsersController < ApplicationController
 
   def build_user
     @user = current_account.users.new(user_params)
-    @user.company = current_user.company
+    @user.company ||= current_user.company
   end
 
   def user_params
@@ -130,13 +131,20 @@ class UsersController < ApplicationController
       permitted_params = %i[email first_name last_name password archived_at otp_required_for_login]
 
       permitted_params << :role if role_valid?(params.dig(:user, :role))
+      permitted_params << :company_id if current_user.platform_admin?
 
       params.require(:user).permit(permitted_params)
     else
       {}
     end
   end
-    
+
+  def load_companies
+    return unless current_user.platform_admin?
+
+    @companies = current_account.companies.where(active: true).order(:name)
+    @companies = current_account.companies.order(:name) if @companies.empty?
+  end
 
   def load_departments
     @available_departments = assignable_departments_scope.order(:name)

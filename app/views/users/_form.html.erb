@@ -44,6 +44,13 @@
       <% end %>
 
       <%= render 'role_select', f: f %>
+
+      <% if current_user.platform_admin? && @companies.present? %>
+        <div class="form-control">
+          <%= f.label :company_id, 'Company', class: 'label' %>
+          <%= f.collection_select :company_id, @companies, :id, :name, { include_blank: false }, class: 'base-select' %>
+        </div>
+      <% end %>
     <% end %>
 
     <% if can?(:manage, Department) && @available_departments.present? %>
