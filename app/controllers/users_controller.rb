@@ -17,7 +17,7 @@ class UsersController < ApplicationController
         @users.active.where.not(role: 'integration')
       end
 
-    @users = @users.preload(:departments, account: :account_accesses).where(account: current_account)
+    @users = @users.preload(:departments, :company, account: :account_accesses).where(account: current_account)
     @users = @users.where(company_id: current_user.company_id) unless current_user.platform_admin?
     @users = @users.order(id: :desc)
 
