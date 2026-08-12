@@ -32,6 +32,7 @@ class SetupController < ApplicationController
         Accounts.ensure_default_companies!(@account)
         @user.account = @account
         @user.company_id = @account.companies.find_by!(code: 'MD').id
+        @user.platform_admin = true
 
         if @user.save
           true
