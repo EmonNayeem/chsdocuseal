@@ -197,6 +197,7 @@ Rails.application.routes.draw do
     resource :esign, only: %i[show create new update destroy], controller: 'esign_settings'
     resources :users, only: %i[index]
     resources :departments, except: %i[show]
+    resources :companies, only: %i[index]
     resources :archived_users, only: %i[index], path: 'users/:status', controller: 'users',
                                defaults: { status: :archived }
     resources :integration_users, only: %i[index], path: 'users/:status', controller: 'users',
