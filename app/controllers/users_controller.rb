@@ -168,7 +168,7 @@ class UsersController < ApplicationController
 
     department_ids = assignable_departments_scope
                                     .where(company_id: user.company_id)
-                                    .where(id: Array(params.dig(:user, :department_ids)).reject(&:blank?))
+                                    .where(id: Array(params.dig(:user, :department_ids)).compact_blank)
                                     .pluck(:id)
 
     user.department_ids = department_ids

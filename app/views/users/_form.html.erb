@@ -76,8 +76,7 @@
                    UserDepartment.where(user_id: target_user.id).pluck(:department_id).map(&:to_i)
                  else
                    Array(target_user.department_ids).map(&:to_i)
-                 end
-            %>
+                 end %>
             <% departments_to_render.each do |department| %>
               <% is_hidden = current_user.platform_admin? && department.company_id != target_company_id %>
               <label class="flex items-center gap-2 department-checkbox-label <%= 'hidden' if is_hidden %>" data-company-id="<%= department.company_id %>" data-department-id="<%= department.id %>" data-selected="<%= selected_department_ids.include?(department.id.to_i) %>">

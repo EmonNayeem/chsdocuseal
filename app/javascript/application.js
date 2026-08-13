@@ -286,7 +286,7 @@ const updateUserDepartmentState = (roleSelect) => {
   const isAdmin = roleSelect.value === 'admin'
 
   wrapper.classList.toggle('opacity-50', isAdmin)
-  
+
   if (adminMessage) {
     adminMessage.classList.toggle('hidden', !isAdmin)
   }
