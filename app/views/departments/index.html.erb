@@ -18,6 +18,7 @@
         <thead class="bg-base-200">
           <tr class="text-neutral uppercase">
             <th>Name</th>
+            <th>Company</th>
             <th>Users</th>
             <th>Templates</th>
             <th class="text-right" width="1px"></th>
@@ -28,6 +29,7 @@
           <% @departments.each do |department| %>
             <tr>
               <td><%= department.name %></td>
+              <td><%= department.company&.name || 'No company' %></td>
               <td><%= department.users.size %></td>
               <td><%= department.templates.size %></td>
               <td class="flex items-center space-x-2 justify-end">
@@ -47,7 +49,7 @@
 
           <% if @departments.blank? %>
             <tr>
-              <td colspan="4" class="text-center opacity-70">
+              <td colspan="5" class="text-center opacity-70">
                 No departments yet.
               </td>
             </tr>

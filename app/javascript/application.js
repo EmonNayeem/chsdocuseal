@@ -56,6 +56,7 @@ import OpenModal from './elements/open_modal'
 import BarChart from './elements/bar_chart'
 import FieldCondition from './elements/field_condition'
 import ConfirmUpload from './elements/confirm_upload'
+import UserDepartmentsForm from './elements/user_departments_form'
 
 import flatpickr from 'flatpickr'
 import 'flatpickr/dist/flatpickr.css'
@@ -153,6 +154,7 @@ safeRegisterElement('open-modal', OpenModal)
 safeRegisterElement('bar-chart', BarChart)
 safeRegisterElement('field-condition', FieldCondition)
 safeRegisterElement('confirm-upload', ConfirmUpload)
+safeRegisterElement('user-departments-form', UserDepartmentsForm)
 
 safeRegisterElement('template-builder', class extends HTMLElement {
   connectedCallback () {

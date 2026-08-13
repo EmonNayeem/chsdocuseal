@@ -82,7 +82,10 @@ class UsersController < ApplicationController
       @user.account = account
     end
 
+    old_company_id = @user.company_id
+
     if @user.update(attrs.except(*(current_user == @user ? %i[password otp_required_for_login role] : %i[password])))
+      cleanup_cross_company_departments(@user, old_company_id)
       assign_user_departments(@user)
       if @user.try(:pending_reconfirmation?) && @user.previous_changes.key?(:unconfirmed_email)
         SendConfirmationInstructionsJob.perform_async('user_id' => @user.id)
@@ -147,7 +150,9 @@ class UsersController < ApplicationController
   end
 
   def load_departments
-    @available_departments = assignable_departments_scope.order(:name)
+    target_company_id = @user&.company_id || current_user.company_id
+    @available_departments = assignable_departments_scope.where(company_id: target_company_id).order(:name)
+    @all_account_departments = assignable_departments_scope.order(:name) if current_user.platform_admin?
   end
 
   def assign_user_departments(user)
@@ -162,9 +167,19 @@ class UsersController < ApplicationController
     return unless params[:user].key?(:department_ids)
 
     department_ids = assignable_departments_scope
+                                    .where(company_id: user.company_id)
                                     .where(id: Array(params.dig(:user, :department_ids)).reject(&:blank?))
                                     .pluck(:id)
 
     user.department_ids = department_ids
+  end
+
+  def cleanup_cross_company_departments(user, old_company_id)
+    return if old_company_id == user.company_id
+
+    UserDepartment.joins(:department)
+                  .where(user_id: user.id)
+                  .where.not(departments: { company_id: user.company_id })
+                  .destroy_all
   end
 end
