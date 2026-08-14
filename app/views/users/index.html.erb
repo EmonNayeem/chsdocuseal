@@ -13,7 +13,7 @@
       </h1>
       <div class="flex flex-col md:flex-row gap-y-2 gap-x-4 md:items-center">
         <% if params[:status].blank? %>
-          <% if can?(:create, User.new(account: current_account)) %>
+          <% if can?(:create, User.new(account: current_account, company: current_user.company)) %>
             <%= render 'users/extra_buttons' %>
             <% if content_for(:add_user_button) %>
               <%= content_for(:add_user_button) %>
