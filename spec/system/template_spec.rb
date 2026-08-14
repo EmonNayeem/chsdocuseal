@@ -43,9 +43,8 @@ RSpec.describe 'Template' do
     it 'archives a template' do
       expect do
         click_button 'Archive'
+        expect(page).to have_content('Template has been archived')
       end.to change { Template.active.count }.by(-1)
-
-      expect(page).to have_content('Template has been archived')
     end
 
     it 'edits a template' do
@@ -181,10 +180,13 @@ RSpec.describe 'Template' do
       page.find('.dropdown', text: 'Filter').click
       click_link 'Created at'
       within '#modal' do
-        fill_in 'From', with: I18n.l(10.days.ago, format: '%Y-%m-%d')
-        fill_in 'To', with: I18n.l(6.days.ago, format: '%Y-%m-%d')
+        expect(page).to have_css('#date_from', visible: :all, wait: 5)
+        find('#date_from', visible: :all).set(I18n.l(10.days.ago, format: '%Y-%m-%d'))
+        find('#date_to', visible: :all).set(I18n.l(6.days.ago, format: '%Y-%m-%d'))
         click_button 'Apply'
       end
+
+      expect(page).to have_current_path(/created_at_from=/, wait: 5)
 
       last_week_submissions.map(&:submitters).flatten.uniq.each do |submitter|
         expect(page).to have_content(submitter.name)
@@ -218,10 +220,13 @@ RSpec.describe 'Template' do
       page.find('.dropdown', text: 'Filter').click
       click_link 'Completed at'
       within '#modal' do
-        fill_in 'From', with: I18n.l(5.days.ago, format: '%Y-%m-%d')
-        fill_in 'To', with: I18n.l(1.day.ago, format: '%Y-%m-%d')
+        expect(page).to have_css('#date_from', visible: :all, wait: 5)
+        find('#date_from', visible: :all).set(I18n.l(5.days.ago, format: '%Y-%m-%d'))
+        find('#date_to', visible: :all).set(I18n.l(1.day.ago, format: '%Y-%m-%d'))
         click_button 'Apply'
       end
+
+      expect(page).to have_current_path(/completed_at_from=/, wait: 5)
 
       this_week_submissions.map(&:submitters).flatten.uniq.each do |submitter|
         expect(page).to have_content(submitter.name)

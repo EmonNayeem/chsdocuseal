@@ -9,7 +9,7 @@ FactoryBot.define do
 
     trait :with_templates do
       after(:create) do |template_folder|
-        create_list(:template, 2, folder: template_folder, account: template_folder.account)
+        create_list(:template, 2, folder: template_folder, account: template_folder.account, author: template_folder.author)
       end
     end
   end
