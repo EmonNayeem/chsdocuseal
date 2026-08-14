@@ -2,10 +2,10 @@
   <%= f.label :role, class: 'label' %>
 
   <% role_options = {
-    User::ADMIN_ROLE => 'Admin - Full system access',
-    User::EDITOR_ROLE => 'Editor - Department-wise create/edit/delete access',
-    User::VIEWER_ROLE => 'Viewer - Department-wise view-only access'
-  } %>
+       User::ADMIN_ROLE => 'Admin - Full system access',
+       User::EDITOR_ROLE => 'Editor - Department-wise create/edit/delete access',
+       User::VIEWER_ROLE => 'Viewer - Department-wise view-only access'
+     } %>
 
   <%= f.select :role,
                User::ROLES.map { |role| [role_options[role] || t(role, default: role.titleize), role] },

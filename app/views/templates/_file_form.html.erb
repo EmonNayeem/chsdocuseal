@@ -18,12 +18,11 @@
     </folder-autocomplete>
   </div>
 
-  <% available_departments =
-     if current_user.department_acl_admin?
-       current_account.departments.order(:name)
-     else
-       current_user.departments.order(:name)
-     end %>
+  <% available_departments = if current_user.department_acl_admin?
+                               current_account.departments.order(:name)
+                             else
+                               current_user.departments.order(:name)
+                             end %>
 
   <% if available_departments.present? %>
     <div class="mt-4">
@@ -72,7 +71,7 @@
                         class: 'toggle' %>
     </div>
   </div>
-  
+
   <div class="form-control">
     <%= f.button button_title(title: t('create'), disabled_with: t('creating')), class: 'base-button' %>
   </div>
