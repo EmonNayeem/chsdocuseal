@@ -14,6 +14,7 @@ class SetupController < ApplicationController
     @encrypted_config = EncryptedConfig.new(account: @account, key: EncryptedConfig::APP_URL_KEY)
   end
 
+  # rubocop:disable Metrics/AbcSize, Metrics/MethodLength -- Existing complex method
   def create
     @account = Account.new(account_params)
     @account.timezone = Accounts.normalize_timezone(@account.timezone)
@@ -28,20 +29,16 @@ class SetupController < ApplicationController
     end
 
     success = Account.transaction do
-      if @account.save
-        Accounts.ensure_default_companies!(@account)
-        @user.account = @account
-        @user.company_id = @account.companies.find_by!(code: 'MD').id
-        @user.platform_admin = true
+      raise ActiveRecord::Rollback unless @account.save
 
-        if @user.save
-          true
-        else
-          raise ActiveRecord::Rollback
-        end
-      else
-        raise ActiveRecord::Rollback
-      end
+      Accounts.ensure_default_companies!(@account)
+      @user.account = @account
+      @user.company_id = @account.companies.find_by!(code: 'MD').id
+      @user.platform_admin = true
+
+      raise ActiveRecord::Rollback unless @user.save
+
+      true
     end
 
     if success
@@ -62,6 +59,7 @@ class SetupController < ApplicationController
       render :index, status: :unprocessable_content
     end
   end
+  # rubocop:enable Metrics/AbcSize, Metrics/MethodLength
 
   private
 

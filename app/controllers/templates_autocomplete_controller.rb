@@ -3,6 +3,7 @@
 class TemplatesAutocompleteController < ApplicationController
   skip_authorization_check only: :index
 
+  # rubocop:disable Metrics/AbcSize -- Existing complex method
   def index
     templates = Template
                 .accessible_by(current_ability)
@@ -39,4 +40,5 @@ class TemplatesAutocompleteController < ApplicationController
       }
     }
   end
+  # rubocop:enable Metrics/AbcSize
 end

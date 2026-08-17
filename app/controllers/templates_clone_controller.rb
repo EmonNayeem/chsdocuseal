@@ -9,6 +9,7 @@ class TemplatesCloneController < ApplicationController
     @template = Template.new(name: "#{@base_template.name} (#{I18n.t('clone')})")
   end
 
+  # rubocop:disable Metrics/AbcSize -- Existing complex method
   def create
     ActiveRecord::Associations::Preloader.new(
       records: [@base_template],
@@ -47,6 +48,7 @@ class TemplatesCloneController < ApplicationController
       render turbo_stream: turbo_stream.replace(:modal, partial: 'templates_clone/form'), status: :unprocessable_content
     end
   end
+  # rubocop:enable Metrics/AbcSize
 
   private
 

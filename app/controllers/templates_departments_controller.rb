@@ -17,7 +17,7 @@ class TemplatesDepartmentsController < ApplicationController
   private
 
   def allowed_template_department_ids(raw_ids)
-    submitted_ids = Array(raw_ids).reject(&:blank?)
+    submitted_ids = Array(raw_ids).compact_blank
 
     if current_user.department_acl_admin?
       current_account.departments.where(id: submitted_ids).pluck(:id)

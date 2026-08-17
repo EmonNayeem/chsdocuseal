@@ -71,15 +71,22 @@ class TemplatesDashboardController < ApplicationController
   end
 
   def apply_dashboard_filters(templates)
-    templates = templates.joins(:template_departments).where(template_departments: { department_id: params[:department_id] }) if params[:department_id].present?
+    if params[:department_id].present?
+      templates = templates.joins(:template_departments)
+                           .where(template_departments: { department_id: params[:department_id] })
+    end
     templates = templates.where(author_id: params[:author_id]) if params[:author_id].present?
 
     if params[:created_from].present?
-      templates = templates.where(Template.arel_table[:created_at].gteq(Time.zone.parse(params[:created_from]).beginning_of_day))
+      templates = templates.where(
+        Template.arel_table[:created_at].gteq(Time.zone.parse(params[:created_from]).beginning_of_day)
+      )
     end
 
     if params[:created_to].present?
-      templates = templates.where(Template.arel_table[:created_at].lteq(Time.zone.parse(params[:created_to]).end_of_day))
+      templates = templates.where(
+        Template.arel_table[:created_at].lteq(Time.zone.parse(params[:created_to]).end_of_day)
+      )
     end
 
     templates

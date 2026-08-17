@@ -194,9 +194,12 @@ class Submission < ApplicationRecord
 
     ActiveStorage::Blob.proxy_url(combined_document.blob, expires_at:)
   end
+
   private
 
   def assign_company_from_parent
+    # rubocop:disable Style/SafeNavigationChainLength, Layout/LineLength
     self.company_id ||= template&.company_id || created_by_user&.company_id || account&.companies&.find_by(code: 'MD')&.id
+    # rubocop:enable Style/SafeNavigationChainLength, Layout/LineLength
   end
 end

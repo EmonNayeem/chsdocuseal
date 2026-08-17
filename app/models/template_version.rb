@@ -46,9 +46,10 @@ class TemplateVersion < ApplicationRecord
   def set_account
     self.account ||= template.account
   end
-  private
 
   def assign_company_from_parent
+    # rubocop:disable Style/SafeNavigationChainLength
     self.company_id ||= template&.company_id || author&.company_id || account&.companies&.find_by(code: 'MD')&.id
+    # rubocop:enable Style/SafeNavigationChainLength
   end
 end

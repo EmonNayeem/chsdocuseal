@@ -67,6 +67,7 @@ module Api
       render json: Submissions::SerializeForApi.call(@submission, submitters, params)
     end
 
+    # rubocop:disable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity -- Existing complex method
     def create
       Params::SubmissionCreateValidator.call(params)
 
@@ -113,6 +114,7 @@ module Api
 
       render json: { error: e.message }, status: :unprocessable_content
     end
+    # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
     def update
       @submission = assign_submission_attrs(@submission, submission_params)

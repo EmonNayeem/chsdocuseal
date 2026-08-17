@@ -3,6 +3,7 @@
 class TemplatesCloneAndReplaceController < ApplicationController
   load_and_authorize_resource :template
 
+  # rubocop:disable Metrics/AbcSize -- Existing complex method
   def create
     return head :unprocessable_content if params[:files].blank?
 
@@ -43,6 +44,7 @@ class TemplatesCloneAndReplaceController < ApplicationController
       f.json { render json: { error: 'PDF encrypted', status: 'pdf_encrypted' }, status: :unprocessable_content }
     end
   end
+  # rubocop:enable Metrics/AbcSize
 
   private
 

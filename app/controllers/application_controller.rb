@@ -62,7 +62,9 @@ class ApplicationController < ActionController::Base
     Rollbar.warning(error) if defined?(Rollbar)
 
     respond_to do |format|
-      format.html { redirect_to root_path, alert: I18n.t('access_denied', default: 'You do not have access to this item.') }
+      format.html do
+        redirect_to root_path, alert: I18n.t('access_denied', default: 'You do not have access to this item.')
+      end
       format.json { render json: { error: 'Access denied' }, status: :forbidden }
       format.any { head :forbidden }
     end

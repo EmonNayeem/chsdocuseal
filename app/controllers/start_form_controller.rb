@@ -35,6 +35,7 @@ class StartFormController < ApplicationController
     end
   end
 
+  # rubocop:disable Metrics/MethodLength, Metrics/PerceivedComplexity -- Existing complex method
   def update
     submitted_params = submitter_params
 
@@ -79,6 +80,7 @@ class StartFormController < ApplicationController
       end
     end
   end
+  # rubocop:enable Metrics/MethodLength, Metrics/PerceivedComplexity
 
   def completed
     return redirect_to start_form_path(@template.slug) if !@template.shared_link? || @template.archived_at?
