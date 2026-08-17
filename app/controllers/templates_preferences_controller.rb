@@ -47,6 +47,7 @@ class TemplatesPreferencesController < ApplicationController
 
   private
 
+  # rubocop:disable Metrics/MethodLength -- Existing complex method
   def template_params
     params.require(:template).permit(
       preferences: %i[bcc_completed request_email_subject request_email_body
@@ -57,7 +58,8 @@ class TemplatesPreferencesController < ApplicationController
                       documents_copy_email_attach_documents documents_copy_email_reply_to
                       completed_notification_email_attach_documents completed_redirect_url validate_unique_submitters
                       require_all_submitters submitters_order require_phone_2fa require_email_2fa
-                      confidential_access default_expire_at_duration shared_link_2fa default_expire_at request_email_enabled
+                      confidential_access default_expire_at_duration shared_link_2fa
+                      default_expire_at request_email_enabled
                       completed_notification_email_subject completed_notification_email_body
                       completed_notification_email_enabled completed_notification_email_attach_audit] +
                       [{ completed_message: %i[title body],
@@ -81,4 +83,5 @@ class TemplatesPreferencesController < ApplicationController
       end
     end
   end
+  # rubocop:enable Metrics/MethodLength
 end

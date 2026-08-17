@@ -164,9 +164,12 @@ class User < ApplicationRecord
       false
     end
   end
+
   private
 
   def assign_company_from_parent
+    # rubocop:disable Style/SafeNavigationChainLength
     self.company_id ||= account&.companies&.find_by(code: 'MD')&.id
+    # rubocop:enable Style/SafeNavigationChainLength
   end
 end

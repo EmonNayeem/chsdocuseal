@@ -3,9 +3,7 @@
 namespace :departments do
   desc 'List templates without departments'
   task list_unassigned_templates: :environment do
-    templates = Template.left_joins(:template_departments)
-                        .where(template_departments: { id: nil })
-                        .order(:id)
+    templates = Template.where.missing(:template_departments).order(:id)
 
     if templates.blank?
       puts 'No unassigned templates found.'
@@ -22,10 +20,11 @@ namespace :departments do
     end
   end
 
-  desc 'Assign a department to templates by ID. Usage: DEPARTMENT=ICT TEMPLATE_IDS=1,2,3 APPLY=false bin/rails departments:assign_templates'
+  desc 'Assign a department to templates by ID. ' \
+       'Usage: DEPARTMENT=ICT TEMPLATE_IDS=1,2,3 APPLY=false bin/rails departments:assign_templates'
   task assign_templates: :environment do
     department_name = ENV.fetch('DEPARTMENT', '').strip
-    template_ids = ENV.fetch('TEMPLATE_IDS', '').split(',').map(&:strip).reject(&:blank?)
+    template_ids = ENV.fetch('TEMPLATE_IDS', '').split(',').map(&:strip).compact_blank
     apply = ENV.fetch('APPLY', 'false') == 'true'
 
     if department_name.blank?

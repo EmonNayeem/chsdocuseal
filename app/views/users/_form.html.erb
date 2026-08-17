@@ -44,36 +44,58 @@
       <% end %>
 
       <%= render 'role_select', f: f %>
+
+      <% if current_user.platform_admin? && @companies.present? %>
+        <div class="form-control">
+          <%= f.label :company_id, 'Company', class: 'label' %>
+          <%= f.collection_select :company_id, @companies, :id, :name, { include_blank: false }, class: 'base-select' %>
+        </div>
+      <% end %>
     <% end %>
 
-    <% if can?(:manage, Department) && @available_departments.present? %>
+    <% departments_to_render = current_user.platform_admin? && @all_account_departments ? @all_account_departments : @available_departments %>
+    <% if can?(:manage, Department) && departments_to_render.present? %>
       <% admin_role_selected = user.role == User::ADMIN_ROLE %>
+      <% target_company_id = user.company_id || current_user.company_id %>
 
-      <div data-user-departments-wrapper="true" class="<%= 'opacity-50' if admin_role_selected %>">
-        <label class="label">Departments</label>
+      <user-departments-form>
+        <div data-user-departments-wrapper="true" class="<%= 'opacity-50' if admin_role_selected %>">
+          <label class="label">Departments</label>
 
-        <p data-admin-departments-message="true"
-          class="text-sm opacity-70 mb-2 <%= 'hidden' unless admin_role_selected %>">
-          Admin users can access all departments automatically, so department assignment is not required.
-        </p>
+          <p data-admin-departments-message="true"
+            class="text-sm opacity-70 mb-2 <%= 'hidden' unless admin_role_selected %>">
+            Admin users can access all departments automatically, so department assignment is not required.
+          </p>
 
-        <%= hidden_field_tag 'user[department_ids][]', '' %>
+          <%= hidden_field_tag 'user[department_ids][]', '' %>
 
-        <div class="space-y-2">
-          <% @available_departments.each do |department| %>
-            <label class="flex items-center gap-2">
-              <%= check_box_tag 'user[department_ids][]',
-                                department.id,
-                                admin_role_selected || user.department_ids.include?(department.id),
-                                class: 'checkbox checkbox-sm',
-                                disabled: admin_role_selected,
-                                data: { user_department_checkbox: true } %>
+          <div class="space-y-2">
+            <% target_user = f.object %>
+            <% selected_department_ids =
+                 if target_user.persisted?
+                   UserDepartment.where(user_id: target_user.id).pluck(:department_id).map(&:to_i)
+                 else
+                   Array(target_user.department_ids).map(&:to_i)
+                 end %>
+            <% departments_to_render.each do |department| %>
+              <% is_hidden = current_user.platform_admin? && department.company_id != target_company_id %>
+              <label class="flex items-center gap-2 department-checkbox-label <%= 'hidden' if is_hidden %>" data-company-id="<%= department.company_id %>" data-department-id="<%= department.id %>" data-selected="<%= selected_department_ids.include?(department.id.to_i) %>">
+                <%= check_box_tag 'user[department_ids][]',
+                                  department.id,
+                                  admin_role_selected || selected_department_ids.include?(department.id.to_i),
+                                  class: 'checkbox checkbox-sm department-checkbox',
+                                  disabled: admin_role_selected,
+                                  data: { user_department_checkbox: true } %>
 
-              <span><%= department.name %></span>
-            </label>
-          <% end %>
+                <span><%= department.name %></span>
+              </label>
+            <% end %>
+            <div id="no-departments-message" class="alert <%= 'hidden' if departments_to_render.any? { |d| d.company_id == target_company_id } %>">
+              Create departments first, then assign users to them.
+            </div>
+          </div>
         </div>
-      </div>
+      </user-departments-form>
     <% elsif can?(:manage, Department) %>
       <div class="alert">
         Create departments first, then assign users to them.

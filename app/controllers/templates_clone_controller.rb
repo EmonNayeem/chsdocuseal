@@ -9,6 +9,7 @@ class TemplatesCloneController < ApplicationController
     @template = Template.new(name: "#{@base_template.name} (#{I18n.t('clone')})")
   end
 
+  # rubocop:disable Metrics/AbcSize -- Existing complex method
   def create
     ActiveRecord::Associations::Preloader.new(
       records: [@base_template],
@@ -19,17 +20,17 @@ class TemplatesCloneController < ApplicationController
                                                       name: params.dig(:template, :name),
                                                       folder_name: params[:folder_name])
 
-    authorize!(:create, @template)
-
     if params[:account_id].present? && true_ability.can?(:manage, Account.find(params[:account_id]))
       @template.account_id = params[:account_id]
       @template.author = true_user if true_user.account_id == @template.account_id
       @template.folder = @template.account.default_template_folder if @template.account_id != current_account.id
+      @template.company = true_user.company if true_user.account_id == @template.account_id
     else
       @template.account = current_account
+      @template.company = current_user.company
     end
 
-    @template.company = current_user.company
+    authorize!(:create, @template)
 
     Templates.maybe_assign_access(@template)
 
@@ -47,6 +48,7 @@ class TemplatesCloneController < ApplicationController
       render turbo_stream: turbo_stream.replace(:modal, partial: 'templates_clone/form'), status: :unprocessable_content
     end
   end
+  # rubocop:enable Metrics/AbcSize
 
   private
 

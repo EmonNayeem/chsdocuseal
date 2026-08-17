@@ -80,5 +80,5 @@ class TemplatesUploadsController < ApplicationController
     return [] if current_user.department_acl_admin?
 
     current_user.department_ids
-  end    
+  end
 end

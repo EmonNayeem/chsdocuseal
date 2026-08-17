@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddCompanyTenancyPhase1A < ActiveRecord::Migration[8.1]
   class Account < ApplicationRecord; end
   class Company < ApplicationRecord; end
@@ -10,6 +12,7 @@ class AddCompanyTenancyPhase1A < ActiveRecord::Migration[8.1]
   class TemplateVersion < ApplicationRecord; end
   class SubmissionEvent < ApplicationRecord; end
 
+  # rubocop:disable Metrics/AbcSize -- Existing complex migration
   def up
     create_table :companies do |t|
       t.references :account, null: false, foreign_key: true
@@ -19,13 +22,14 @@ class AddCompanyTenancyPhase1A < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :companies, [:account_id, :code], unique: true
-    add_index :companies, [:account_id, :name], unique: true
+    add_index :companies, %i[account_id code], unique: true
+    add_index :companies, %i[account_id name], unique: true
 
     add_column :users, :platform_admin, :boolean, null: false, default: false
 
     # Add company_id references
-    [:users, :departments, :templates, :submissions, :submitters, :template_folders, :template_versions, :submission_events].each do |table|
+    %i[users departments templates submissions submitters template_folders template_versions
+       submission_events].each do |table|
       add_reference table, :company, foreign_key: true, null: true
     end
 
@@ -75,20 +79,26 @@ class AddCompanyTenancyPhase1A < ActiveRecord::Migration[8.1]
     end
 
     # Enforce non-null for tables that currently enforce non-null account_id
-    [:users, :departments, :templates, :submissions, :submitters, :template_folders, :template_versions].each do |table|
+    %i[users departments templates submissions submitters template_folders template_versions].each do |table|
       change_column_null table, :company_id, false
     end
 
     # Replace department name uniqueness scoped to account_id with company_id
-    remove_index :departments, column: [:account_id, :name], name: "index_departments_on_account_id_and_name", if_exists: true
-    add_index :departments, [:company_id, :name], unique: true, name: "index_departments_on_company_id_and_name", if_not_exists: true
+    remove_index :departments, column: %i[account_id name], name: 'index_departments_on_account_id_and_name',
+                               if_exists: true
+    add_index :departments, %i[company_id name], unique: true, name: 'index_departments_on_company_id_and_name',
+                                                 if_not_exists: true
   end
+  # rubocop:enable Metrics/AbcSize
 
   def down
-    remove_index :departments, column: [:company_id, :name], name: "index_departments_on_company_id_and_name", if_exists: true
-    add_index :departments, [:account_id, :name], unique: true, name: "index_departments_on_account_id_and_name", if_not_exists: true
+    remove_index :departments, column: %i[company_id name], name: 'index_departments_on_company_id_and_name',
+                               if_exists: true
+    add_index :departments, %i[account_id name], unique: true, name: 'index_departments_on_account_id_and_name',
+                                                 if_not_exists: true
 
-    [:users, :departments, :templates, :submissions, :submitters, :template_folders, :template_versions, :submission_events].each do |table|
+    %i[users departments templates submissions submitters template_folders template_versions
+       submission_events].each do |table|
       remove_reference table, :company, foreign_key: true
     end
 

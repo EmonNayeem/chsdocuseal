@@ -4,7 +4,7 @@ class TemplatesController < ApplicationController
   load_and_authorize_resource :template
 
   def template_create_department_ids(raw_ids)
-    submitted_ids = Array(raw_ids).reject(&:blank?)
+    submitted_ids = Array(raw_ids).compact_blank
 
     if current_user.department_acl_admin?
       if current_user.platform_admin?
@@ -108,7 +108,7 @@ class TemplatesController < ApplicationController
   private
 
   def assign_create_preferences(template)
-    return unless params.dig(:template, :preferences).present?
+    return if params.dig(:template, :preferences).blank?
 
     confidential_access = params.dig(:template, :preferences, :confidential_access)
 

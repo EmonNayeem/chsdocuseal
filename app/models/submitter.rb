@@ -134,9 +134,10 @@ class Submitter < ApplicationRecord
       event.update!(email: Digest::MD5.base64digest(event.email))
     end
   end
-  private
 
   def assign_company_from_parent
+    # rubocop:disable Style/SafeNavigationChainLength
     self.company_id ||= submission&.company_id || account&.companies&.find_by(code: 'MD')&.id
+    # rubocop:enable Style/SafeNavigationChainLength
   end
 end

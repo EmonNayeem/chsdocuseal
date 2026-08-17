@@ -95,7 +95,7 @@
                       data: { turbo_confirm: t('are_you_sure_') } %>
       <% end %>
 
-      <% if can?(:create, current_account.templates.new(author: current_user)) %>
+      <% if can?(:create, current_account.templates.new(author: current_user, company: template.company)) %>
         <%= link_to new_template_clone_path(template),
                     class: 'btn btn-outline btn-sm flex-1 md:flex-none',
                     data: { turbo_frame: :modal } do %>

@@ -14,6 +14,13 @@
     <%= f.text_field :name, required: true, class: 'base-input w-full', placeholder: 'ICT' %>
   </div>
 
+  <% if current_user.platform_admin? && @companies.present? %>
+    <div>
+      <%= f.label :company_id, 'Company', class: 'label' %>
+      <%= f.collection_select :company_id, @companies, :id, :name, { include_blank: false }, class: 'base-select w-full' %>
+    </div>
+  <% end %>
+
   <%= f.button @department.persisted? ? 'Update Department' : 'Create Department',
                class: 'base-button' %>
 <% end %>

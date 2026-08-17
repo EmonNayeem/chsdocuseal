@@ -5,6 +5,7 @@ class UsersController < ApplicationController
 
   before_action :build_user, only: %i[new create]
   before_action :load_departments, only: %i[new edit create update]
+  before_action :load_companies, only: %i[new edit create update]
   authorize_resource :user, only: %i[new create]
 
   def index
@@ -17,7 +18,7 @@ class UsersController < ApplicationController
         @users.active.where.not(role: 'integration')
       end
 
-    @users = @users.preload(:departments, account: :account_accesses).where(account: current_account)
+    @users = @users.preload(:departments, :company, account: :account_accesses).where(account: current_account)
     @users = @users.where(company_id: current_user.company_id) unless current_user.platform_admin?
     @users = @users.order(id: :desc)
 
@@ -81,7 +82,10 @@ class UsersController < ApplicationController
       @user.account = account
     end
 
+    old_company_id = @user.company_id
+
     if @user.update(attrs.except(*(current_user == @user ? %i[password otp_required_for_login role] : %i[password])))
+      cleanup_cross_company_departments(@user, old_company_id)
       assign_user_departments(@user)
       if @user.try(:pending_reconfirmation?) && @user.previous_changes.key?(:unconfirmed_email)
         SendConfirmationInstructionsJob.perform_async('user_id' => @user.id)
@@ -122,7 +126,7 @@ class UsersController < ApplicationController
 
   def build_user
     @user = current_account.users.new(user_params)
-    @user.company = current_user.company
+    @user.company ||= current_user.company
   end
 
   def user_params
@@ -130,16 +134,25 @@ class UsersController < ApplicationController
       permitted_params = %i[email first_name last_name password archived_at otp_required_for_login]
 
       permitted_params << :role if role_valid?(params.dig(:user, :role))
+      permitted_params << :company_id if current_user.platform_admin?
 
       params.require(:user).permit(permitted_params)
     else
       {}
     end
   end
-    
+
+  def load_companies
+    return unless current_user.platform_admin?
+
+    @companies = current_account.companies.where(active: true).order(:name)
+    @companies = current_account.companies.order(:name) if @companies.empty?
+  end
 
   def load_departments
-    @available_departments = assignable_departments_scope.order(:name)
+    target_company_id = @user&.company_id || current_user.company_id
+    @available_departments = assignable_departments_scope.where(company_id: target_company_id).order(:name)
+    @all_account_departments = assignable_departments_scope.order(:name) if current_user.platform_admin?
   end
 
   def assign_user_departments(user)
@@ -154,9 +167,19 @@ class UsersController < ApplicationController
     return unless params[:user].key?(:department_ids)
 
     department_ids = assignable_departments_scope
-                                    .where(id: Array(params.dig(:user, :department_ids)).reject(&:blank?))
+                                    .where(company_id: user.company_id)
+                                    .where(id: Array(params.dig(:user, :department_ids)).compact_blank)
                                     .pluck(:id)
 
     user.department_ids = department_ids
+  end
+
+  def cleanup_cross_company_departments(user, old_company_id)
+    return if old_company_id == user.company_id
+
+    UserDepartment.joins(:department)
+                  .where(user_id: user.id)
+                  .where.not(departments: { company_id: user.company_id })
+                  .destroy_all
   end
 end

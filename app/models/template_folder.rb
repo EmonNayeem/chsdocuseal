@@ -56,9 +56,12 @@ class TemplateFolder < ApplicationRecord
   def default?
     name == DEFAULT_NAME
   end
+
   private
 
   def assign_company_from_parent
+    # rubocop:disable Style/SafeNavigationChainLength
     self.company_id ||= author&.company_id || account&.companies&.find_by(code: 'MD')&.id
+    # rubocop:enable Style/SafeNavigationChainLength
   end
 end

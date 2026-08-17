@@ -13,7 +13,7 @@
       </h1>
       <div class="flex flex-col md:flex-row gap-y-2 gap-x-4 md:items-center">
         <% if params[:status].blank? %>
-          <% if can?(:create, User.new(account: current_account)) %>
+          <% if can?(:create, User.new(account: current_account, company: current_user.company)) %>
             <%= render 'users/extra_buttons' %>
             <% if content_for(:add_user_button) %>
               <%= content_for(:add_user_button) %>
@@ -48,6 +48,9 @@
               <%= t('role') %>
             </th>
             <th>
+              Company
+            </th>
+            <th>
               Departments
             </th>
             <th>
@@ -76,6 +79,13 @@
                 <span class="badge badge-info badge-outline whitespace-nowrap">
                   <%= t(user.role) %>
                 </span>
+              </td>
+              <td>
+                <% if user.company %>
+                  <span class="badge badge-outline whitespace-nowrap"><%= user.company.name %></span>
+                <% else %>
+                  <span class="opacity-60">No company</span>
+                <% end %>
               </td>
               <td>
                 <% if user.department_acl_admin? %>

@@ -109,12 +109,12 @@
                                       :require_phone_2fa,
                                       :require_email_2fa,
                                       :confidential_access).new(
-                             @template.preferences['completed_redirect_url'].presence,
-                             Struct.new(:title, :body).new(*(@template.preferences['completed_message'] || {}).values_at('title', 'body')),
-                             @template.preferences['require_phone_2fa'] == true,
-                             @template.preferences['require_email_2fa'] == true,
-                             @template.preferences['confidential_access'] == true
-                           ) do |ff| %>
+                                        @template.preferences['completed_redirect_url'].presence,
+                                        Struct.new(:title, :body).new(*(@template.preferences['completed_message'] || {}).values_at('title', 'body')),
+                                        @template.preferences['require_phone_2fa'] == true,
+                                        @template.preferences['require_email_2fa'] == true,
+                                        @template.preferences['confidential_access'] == true
+                                      ) do |ff| %>
 
             <div class="form-control mb-2">
               <%= ff.label :completed_redirect_url, t('redirect_on_completion_url'), class: 'label' %>
