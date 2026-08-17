@@ -4,13 +4,23 @@
 #
 # Table name: companies
 #
-#  id         :bigint           not null, primary key
-#  active     :boolean          default(TRUE), not null
-#  code       :string           not null
-#  name       :string           not null
-#  created_at :datetime         not null
-#  updated_at :datetime         not null
-#  account_id :bigint           not null
+#  id                        :bigint           not null, primary key
+#  active                    :boolean          default(TRUE), not null
+#  code                      :string           not null
+#  name                      :string           not null
+#  smtp_address              :string
+#  smtp_authentication       :string
+#  smtp_domain               :string
+#  smtp_enable_starttls_auto :boolean          default(FALSE), not null
+#  smtp_enabled              :boolean          default(FALSE), not null
+#  smtp_from_email           :string
+#  smtp_from_name            :string
+#  smtp_password             :text
+#  smtp_port                 :integer
+#  smtp_user_name            :string
+#  created_at                :datetime         not null
+#  updated_at                :datetime         not null
+#  account_id                :bigint           not null
 #
 # Indexes
 #
@@ -36,4 +46,12 @@ class Company < ApplicationRecord
 
   validates :name, presence: true, uniqueness: { scope: :account_id, case_sensitive: false }
   validates :code, presence: true, uniqueness: { scope: :account_id, case_sensitive: false }
+
+  encrypts :smtp_password
+
+  with_options if: :smtp_enabled? do
+    validates :smtp_address, presence: true
+    validates :smtp_port, presence: true, numericality: { only_integer: true, greater_than: 0 }
+    validates :smtp_from_email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
+  end
 end
