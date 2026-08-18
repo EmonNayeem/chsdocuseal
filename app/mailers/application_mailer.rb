@@ -35,9 +35,30 @@ class ApplicationMailer < ActionMailer::Base
       'record_id' => record.id,
       'record_type' => record.class.name
     )
+
+    company_id = company_id_for_message_metadata(record)
+    @message_metadata['company_id'] = company_id if company_id
   end
 
   def put_metadata(attrs)
     @message_metadata = (@message_metadata || {}).merge(attrs)
+  end
+
+  private
+
+  def company_id_for_message_metadata(record)
+    return nil unless record
+
+    if record.respond_to?(:company_id) && record.company_id.present?
+      record.company_id
+    elsif record.respond_to?(:submission) && record.submission&.company_id.present?
+      record.submission.company_id
+    elsif record.respond_to?(:template) && record.template&.company_id.present?
+      record.template.company_id
+    elsif record.respond_to?(:company) && record.company&.id.present?
+      record.company.id
+    end
+  rescue StandardError
+    nil
   end
 end

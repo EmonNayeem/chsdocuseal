@@ -14,6 +14,7 @@
             <th>Code</th>
             <th>Status</th>
             <th>Created</th>
+            <th class="text-right">Actions</th>
           </tr>
         </thead>
 
@@ -30,6 +31,9 @@
                 <% end %>
               </td>
               <td><%= l(company.created_at.to_date, format: :long) %></td>
+              <td class="text-right">
+                <%= link_to 'Edit Settings', edit_settings_company_path(company), class: 'btn btn-ghost btn-sm' %>
+              </td>
             </tr>
           <% end %>
 

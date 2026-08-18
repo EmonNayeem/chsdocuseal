@@ -15,6 +15,8 @@ module ActionMailerConfigsInterceptor
       return message
     end
 
+    return message if apply_company_smtp_settings(message)
+
     if Rails.env.production? && Rails.application.config.action_mailer.delivery_method
       from = ENV.fetch('SMTP_FROM').to_s.split(',').sample
 
@@ -65,5 +67,29 @@ module ActionMailerConfigsInterceptor
       ssl: is_ssl,
       tls: is_tls
     }.compact_blank
+  end
+
+  def apply_company_smtp_settings(message)
+    metadata = message.instance_variable_get(:@message_metadata)
+    return false unless metadata.is_a?(Hash)
+
+    company_id = metadata['company_id'] || metadata[:company_id]
+    return false if company_id.blank?
+
+    company = Company.find_by(id: company_id)
+    return false unless company
+
+    settings = CompanySmtpSettings.resolve(company)
+    return false unless settings
+
+    message.delivery_method(:smtp, settings)
+
+    from_address = CompanySmtpSettings.from_address(company)
+    message.from = from_address if from_address.present?
+
+    true
+  rescue StandardError => e
+    Rails.logger.warn("Company SMTP interceptor fell back after #{e.class.name}") if defined?(Rails.logger)
+    false
   end
 end
