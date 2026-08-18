@@ -201,4 +201,55 @@ RSpec.describe 'Team Settings' do
       expect(page).to have_link('View Active', href: settings_users_path)
     end
   end
+
+  context 'when managing companies' do
+    let!(:company) { Company.create!(account: account, name: 'Acme Corp', code: 'acme') }
+
+    it 'allows platform admin to open company edit SMTP page and update settings' do
+      current_user.update(platform_admin: true)
+      visit settings_companies_path
+
+      expect(page).to have_content('Acme Corp')
+      within('tr', text: 'Acme Corp') do
+        click_link 'Edit Settings'
+      end
+
+      expect(page).to have_content('Edit Company')
+      expect(page).to have_content('These SMTP settings are saved but are not yet used for sending emails.')
+
+      # Validation errors test
+      check 'Enable Custom SMTP'
+      click_button 'Save'
+      expect(page).to have_content("Smtp address can't be blank")
+
+      # Successful update test
+      fill_in 'SMTP Address', with: 'smtp.acme.com'
+      fill_in 'SMTP Port', with: '587'
+      fill_in 'Username', with: 'acmeuser'
+      fill_in 'Password', with: 'newpassword'
+      fill_in 'Send from Email', with: 'no-reply@acme.com'
+      click_button 'Save'
+
+      expect(page).to have_content('Company settings updated successfully.')
+      expect(company.reload.smtp_enabled).to be true
+      expect(company.smtp_address).to eq('smtp.acme.com')
+      expect(company.smtp_password).to eq('newpassword')
+
+      # Blank password on update test
+      visit edit_settings_company_path(company)
+      fill_in 'SMTP Address', with: 'smtp2.acme.com'
+      fill_in 'Password', with: ''
+      click_button 'Save'
+
+      expect(page).to have_content('Company settings updated successfully.')
+      expect(company.reload.smtp_address).to eq('smtp2.acme.com')
+      expect(company.smtp_password).to eq('newpassword') # password preserved
+    end
+
+    it 'prevents non-platform admin from accessing company edit SMTP page' do
+      current_user.update(platform_admin: false, role: 'admin') # Non-platform admin
+      visit edit_settings_company_path(company)
+      expect(page).to have_content('Access denied.')
+    end
+  end
 end
