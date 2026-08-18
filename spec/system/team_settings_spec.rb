@@ -214,7 +214,7 @@ RSpec.describe 'Team Settings' do
         click_link 'Edit Settings'
       end
 
-      expect(page).to have_content('Edit Company')
+      expect(page).to have_content('Edit Acme Corp')
       expect(page).to have_content('These SMTP settings are saved but are not yet used for sending emails.')
 
       # Validation errors test
@@ -250,6 +250,102 @@ RSpec.describe 'Team Settings' do
       current_user.update(platform_admin: false, role: 'admin') # Non-platform admin
       visit edit_settings_company_path(company)
       expect(page).to have_content('Access denied.')
+    end
+
+    it 'allows platform admin to open company edit page and update branding settings' do
+      current_user.update(platform_admin: true)
+      visit settings_companies_path
+
+      within('tr', text: 'Acme Corp') do
+        click_link 'Edit Settings'
+      end
+
+      expect(page).to have_content('Branding Settings')
+      expect(page).to have_content(
+        'These branding settings are saved but are not yet applied to the app, emails, PDFs, or favicon.'
+      )
+
+      # Validation errors test
+      check 'Enable Company Branding'
+      fill_in 'Primary Color', with: 'not-a-color'
+      click_button 'Save'
+
+      expect(page).to have_content("Brand name can't be blank")
+      expect(page).to have_content('Brand primary color is invalid')
+
+      # Successful update test
+      fill_in 'Brand Name', with: 'Acme Custom Brand'
+      fill_in 'Brand From Email Name', with: 'Acme Info'
+      fill_in 'Primary Color', with: '#1A73E8'
+      fill_in 'Logo Key', with: 'logo123'
+      fill_in 'Icon Key', with: 'icon123'
+      click_button 'Save'
+
+      expect(page).to have_content('Company settings updated successfully.')
+      expect(company.reload.branding_enabled).to be true
+      expect(company.brand_name).to eq('Acme Custom Brand')
+      expect(company.brand_from_email_name).to eq('Acme Info')
+      expect(company.brand_primary_color).to eq('#1A73E8')
+      expect(company.brand_logo_key).to eq('logo123')
+      expect(company.brand_icon_key).to eq('icon123')
+    end
+
+    it 'displays company.branded_name in safe UI places when branding is enabled' do
+      current_user.update(platform_admin: true, company: company)
+
+      # Branding disabled initially -> shows company.name
+      visit settings_companies_path
+      expect(page).to have_content('Acme Corp')
+
+      visit settings_users_path
+      expect(page).to have_content('Acme Corp')
+
+      # Enable branding
+      company.update!(branding_enabled: true, brand_name: 'Acme Super Brand')
+
+      # Companies settings list shows branded_name and legal name underneath
+      visit settings_companies_path
+      expect(page).to have_content('Acme Super Brand')
+      expect(page).to have_selector("div[title='Legal Name']", text: 'Acme Corp')
+
+      # Users list company badge shows branded_name and legal name on hover
+      visit settings_users_path
+      expect(page).to have_content('Acme Super Brand')
+      expect(page).to have_selector("span[title='Acme Corp']", text: 'Acme Super Brand')
+
+      # Company edit page uses branded_name in header but keeps legal name in disabled field
+      visit edit_settings_company_path(company)
+      expect(page).to have_content('Edit Acme Super Brand')
+      expect(page).to have_field('Name', with: 'Acme Corp', disabled: true)
+    end
+
+    it 'applies company branded primary color CSS variable when enabled' do
+      current_user.update(platform_admin: true, company: company)
+      company.update!(branding_enabled: true, brand_name: 'Acme Super Brand', brand_primary_color: '#123456')
+
+      visit edit_settings_company_path(company)
+
+      expect(page).to have_selector('div[style*="--company-primary-color: #123456"]')
+      expect(page).to have_selector('h1[style*="color: var(--company-primary-color)"]')
+      expect(page).to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
+    end
+
+    it 'does not apply CSS variable when branding disabled or color blank' do
+      current_user.update(platform_admin: true, company: company)
+
+      # Disabled
+      company.update!(branding_enabled: false, brand_name: 'Acme Super Brand', brand_primary_color: '#123456')
+      visit edit_settings_company_path(company)
+      expect(page).not_to have_selector('div[style*="--company-primary-color:"]')
+      expect(page).not_to have_selector('h1[style*="color: var(--company-primary-color)"]')
+      expect(page).not_to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
+
+      # Enabled but blank color
+      company.update!(branding_enabled: true, brand_primary_color: '   ')
+      visit edit_settings_company_path(company)
+      expect(page).not_to have_selector('div[style*="--company-primary-color:"]')
+      expect(page).not_to have_selector('h1[style*="color: var(--company-primary-color)"]')
+      expect(page).not_to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
     end
   end
 end

@@ -44,6 +44,21 @@ class ApplicationMailer < ActionMailer::Base
     @message_metadata = (@message_metadata || {}).merge(attrs)
   end
 
+  helper_method :branded_company_name_for
+
+  def branded_company_name_for(record, fallback: nil)
+    company_id = company_id_for_message_metadata(record)
+    company = Company.find_by(id: company_id) if company_id
+
+    if company
+      company.branded_name
+    else
+      fallback
+    end
+  rescue StandardError
+    fallback
+  end
+
   private
 
   def company_id_for_message_metadata(record)

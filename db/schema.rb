@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_17_140700) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_18_083405) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -101,6 +101,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_17_140700) do
   create_table "companies", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.boolean "active", default: true, null: false
+    t.string "brand_from_email_name"
+    t.string "brand_icon_key"
+    t.string "brand_logo_key"
+    t.string "brand_name"
+    t.string "brand_primary_color"
+    t.boolean "branding_enabled", default: false, null: false
     t.string "code", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false

@@ -8,6 +8,6 @@
     <%= link_to @submitter.submission.name || @submitter.submission.template&.name, submissions_preview_url(@submitter.submission.slug, { sig: @sig, host: @custom_domain || ENV.fetch('EMAIL_HOST', Docuseal.default_url_options[:host]) }.compact) %>
   </p>
   <p>
-  <%= t('thanks') %>,<br><%= @current_account.name %>
+  <%= t('thanks') %>,<br><%= branded_company_name_for(@submitter, fallback: @current_account.name) %>
   </p>
 <% end %>

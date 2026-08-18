@@ -1,8 +1,19 @@
+<% brand_style = branded_primary_color_style %>
+<% brand_color_accent_style = brand_style.present? ? 'color: var(--company-primary-color);' : nil %>
+
+<% if brand_style.present? %>
+<div class="flex flex-wrap space-y-4 md:flex-nowrap md:space-y-0 md:space-x-10" style="<%= brand_style %>">
+<% else %>
 <div class="flex flex-wrap space-y-4 md:flex-nowrap md:space-y-0 md:space-x-10">
+<% end %>
   <%= render 'shared/settings_nav' %>
   <div class="flex-grow max-w-xl mx-auto">
     <div class="flex flex-col gap-2 md:flex-row md:justify-between md:items-center mb-4">
-      <h1 class="text-4xl font-bold">Edit Company</h1>
+      <% if brand_color_accent_style.present? %>
+      <h1 class="text-4xl font-bold" style="<%= brand_color_accent_style %>">Edit <%= @company.branded_name %></h1>
+      <% else %>
+      <h1 class="text-4xl font-bold">Edit <%= @company.branded_name %></h1>
+      <% end %>
       <%= link_to 'Back to Companies', settings_companies_path, class: 'btn btn-ghost btn-sm' %>
     </div>
 
@@ -103,6 +114,55 @@
         <div class="form-control">
           <%= f.label :smtp_from_name, 'Send From Name (Optional)', class: 'label' %>
           <%= f.text_field :smtp_from_name, class: 'base-input' %>
+        </div>
+      </div>
+
+      <% if brand_color_accent_style.present? %>
+      <div class="divider mt-8" style="<%= brand_color_accent_style %>">Branding Settings</div>
+      <% else %>
+      <div class="divider mt-8">Branding Settings</div>
+      <% end %>
+
+      <div class="alert alert-info shadow-lg mb-6">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <span><strong>Note:</strong> These branding settings are saved but are not yet applied to the app, emails, PDFs, or favicon.</span>
+        </div>
+      </div>
+
+      <div class="form-control mb-4">
+        <label class="label cursor-pointer justify-start gap-3">
+          <%= f.check_box :branding_enabled, class: 'checkbox checkbox-primary' %>
+          <span class="label-text font-semibold">Enable Company Branding</span>
+        </label>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="form-control">
+          <%= f.label :brand_name, 'Brand Name', class: 'label' %>
+          <%= f.text_field :brand_name, class: 'base-input' %>
+        </div>
+        <div class="form-control">
+          <%= f.label :brand_from_email_name, 'Brand From Email Name', class: 'label' %>
+          <%= f.text_field :brand_from_email_name, class: 'base-input' %>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="form-control">
+          <%= f.label :brand_primary_color, 'Primary Color', class: 'label' %>
+          <%= f.text_field :brand_primary_color, class: 'base-input', placeholder: '#1A73E8' %>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="form-control">
+          <%= f.label :brand_logo_key, 'Logo Key', class: 'label' %>
+          <%= f.text_field :brand_logo_key, class: 'base-input' %>
+        </div>
+        <div class="form-control">
+          <%= f.label :brand_icon_key, 'Icon Key', class: 'label' %>
+          <%= f.text_field :brand_icon_key, class: 'base-input' %>
         </div>
       </div>
 

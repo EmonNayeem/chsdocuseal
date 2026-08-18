@@ -6,6 +6,12 @@
 #
 #  id                        :bigint           not null, primary key
 #  active                    :boolean          default(TRUE), not null
+#  brand_from_email_name     :string
+#  brand_icon_key            :string
+#  brand_logo_key            :string
+#  brand_name                :string
+#  brand_primary_color       :string
+#  branding_enabled          :boolean          default(FALSE), not null
 #  code                      :string           not null
 #  name                      :string           not null
 #  smtp_address              :string
@@ -109,6 +115,108 @@ RSpec.describe Company, type: :model do
       sql = "SELECT smtp_password FROM companies WHERE id = #{company.id}"
       raw_password = described_class.connection.select_value(sql)
       expect(raw_password).not_to include('supersecretpassword')
+    end
+  end
+
+  describe 'branding validations' do
+    let(:account) { create(:account) }
+    let(:company) { described_class.new(account: account, name: 'Test', code: 'test') }
+
+    context 'when branding_enabled is false' do
+      before { company.branding_enabled = false }
+
+      it 'allows blank brand fields' do
+        company.brand_name = nil
+        expect(company).to be_valid
+      end
+    end
+
+    context 'when branding_enabled is true' do
+      before { company.branding_enabled = true }
+
+      it 'requires brand_name' do
+        company.brand_name = nil
+        expect(company).not_to be_valid
+        expect(company.errors[:brand_name]).to include("can't be blank")
+      end
+
+      it 'is valid with brand_name' do
+        company.brand_name = 'Acme Brand'
+        expect(company).to be_valid
+      end
+    end
+
+    describe 'brand_primary_color' do
+      let(:account) { create(:account) }
+      let(:company) { described_class.new(account: account, name: 'Test', code: 'test') }
+
+      it 'accepts valid hex colors' do
+        company.brand_primary_color = '#FFFFFF'
+        expect(company).to be_valid
+
+        company.brand_primary_color = '#000'
+        expect(company).to be_valid
+
+        company.brand_primary_color = '#AABBCC'
+        expect(company).to be_valid
+      end
+
+      it 'rejects invalid colors' do
+        company.brand_primary_color = 'FFFFFF' # missing #
+        expect(company).not_to be_valid
+
+        company.brand_primary_color = '#ZZZZZZ' # invalid hex
+        expect(company).not_to be_valid
+
+        company.brand_primary_color = '#1234' # wrong length
+        expect(company).not_to be_valid
+      end
+    end
+  end
+
+  describe '#branded_name' do
+    let(:account) { create(:account) }
+    let(:company) { described_class.new(account: account, name: 'Original Name', code: 'test') }
+
+    it 'falls back to company name when branding disabled' do
+      company.branding_enabled = false
+      company.brand_name = 'Custom Brand'
+      expect(company.branded_name).to eq('Original Name')
+    end
+
+    it 'uses brand_name when enabled and present' do
+      company.branding_enabled = true
+      company.brand_name = 'Custom Brand'
+      expect(company.branded_name).to eq('Custom Brand')
+    end
+
+    it 'falls back to company name if enabled but brand_name is blank' do
+      company.branding_enabled = true
+      company.brand_name = '  '
+      expect(company.branded_name).to eq('Original Name')
+    end
+  end
+
+  describe '#branded_primary_color' do
+    let(:account) { create(:account) }
+    let(:company) { described_class.new(account: account, name: 'Original Name', code: 'test') }
+
+    it 'returns color when branding is enabled and color is present' do
+      company.branding_enabled = true
+      company.brand_primary_color = '#123456'
+      expect(company.branded_primary_color).to eq('#123456')
+    end
+
+    it 'returns nil when branding is disabled even if color is present' do
+      company.branding_enabled = false
+      company.brand_primary_color = '#123456'
+      expect(company.branded_primary_color).to be_nil
+    end
+
+    it 'returns nil if enabled but color is blank' do
+      company.branding_enabled = true
+      company.brand_primary_color = '   '
+      expect(company.branded_primary_color).to be_nil
     end
   end
 end

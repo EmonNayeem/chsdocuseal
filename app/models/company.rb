@@ -6,6 +6,12 @@
 #
 #  id                        :bigint           not null, primary key
 #  active                    :boolean          default(TRUE), not null
+#  brand_from_email_name     :string
+#  brand_icon_key            :string
+#  brand_logo_key            :string
+#  brand_name                :string
+#  brand_primary_color       :string
+#  branding_enabled          :boolean          default(FALSE), not null
 #  code                      :string           not null
 #  name                      :string           not null
 #  smtp_address              :string
@@ -53,5 +59,19 @@ class Company < ApplicationRecord
     validates :smtp_address, presence: true
     validates :smtp_port, presence: true, numericality: { only_integer: true, greater_than: 0 }
     validates :smtp_from_email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP, allow_blank: true }
+  end
+
+  with_options if: :branding_enabled? do
+    validates :brand_name, presence: true
+  end
+
+  validates :brand_primary_color, format: { with: /\A#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})\z/, allow_blank: true }
+
+  def branded_name
+    (branding_enabled? && brand_name.presence) || name
+  end
+
+  def branded_primary_color
+    brand_primary_color.presence if branding_enabled?
   end
 end
