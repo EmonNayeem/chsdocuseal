@@ -1,8 +1,19 @@
+<% brand_style = branded_primary_color_style %>
+<% brand_color_accent_style = brand_style.present? ? 'color: var(--company-primary-color);' : nil %>
+
+<% if brand_style.present? %>
+<div class="flex flex-wrap space-y-4 md:flex-nowrap md:space-y-0 md:space-x-10" style="<%= brand_style %>">
+<% else %>
 <div class="flex flex-wrap space-y-4 md:flex-nowrap md:space-y-0 md:space-x-10">
+<% end %>
   <%= render 'shared/settings_nav' %>
   <div class="flex-grow max-w-xl mx-auto">
     <div class="flex flex-col gap-2 md:flex-row md:justify-between md:items-center mb-4">
+      <% if brand_color_accent_style.present? %>
+      <h1 class="text-4xl font-bold" style="<%= brand_color_accent_style %>">Edit <%= @company.branded_name %></h1>
+      <% else %>
       <h1 class="text-4xl font-bold">Edit <%= @company.branded_name %></h1>
+      <% end %>
       <%= link_to 'Back to Companies', settings_companies_path, class: 'btn btn-ghost btn-sm' %>
     </div>
 
@@ -106,7 +117,11 @@
         </div>
       </div>
 
+      <% if brand_color_accent_style.present? %>
+      <div class="divider mt-8" style="<%= brand_color_accent_style %>">Branding Settings</div>
+      <% else %>
       <div class="divider mt-8">Branding Settings</div>
+      <% end %>
 
       <div class="alert alert-info shadow-lg mb-6">
         <div>

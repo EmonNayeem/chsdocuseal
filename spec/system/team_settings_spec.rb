@@ -318,5 +318,34 @@ RSpec.describe 'Team Settings' do
       expect(page).to have_content('Edit Acme Super Brand')
       expect(page).to have_field('Name', with: 'Acme Corp', disabled: true)
     end
+
+    it 'applies company branded primary color CSS variable when enabled' do
+      current_user.update(platform_admin: true, company: company)
+      company.update!(branding_enabled: true, brand_name: 'Acme Super Brand', brand_primary_color: '#123456')
+
+      visit edit_settings_company_path(company)
+
+      expect(page).to have_selector('div[style*="--company-primary-color: #123456"]')
+      expect(page).to have_selector('h1[style*="color: var(--company-primary-color)"]')
+      expect(page).to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
+    end
+
+    it 'does not apply CSS variable when branding disabled or color blank' do
+      current_user.update(platform_admin: true, company: company)
+
+      # Disabled
+      company.update!(branding_enabled: false, brand_name: 'Acme Super Brand', brand_primary_color: '#123456')
+      visit edit_settings_company_path(company)
+      expect(page).not_to have_selector('div[style*="--company-primary-color:"]')
+      expect(page).not_to have_selector('h1[style*="color: var(--company-primary-color)"]')
+      expect(page).not_to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
+
+      # Enabled but blank color
+      company.update!(branding_enabled: true, brand_primary_color: '   ')
+      visit edit_settings_company_path(company)
+      expect(page).not_to have_selector('div[style*="--company-primary-color:"]')
+      expect(page).not_to have_selector('h1[style*="color: var(--company-primary-color)"]')
+      expect(page).not_to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
+    end
   end
 end
