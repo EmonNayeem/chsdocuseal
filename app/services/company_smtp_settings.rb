@@ -21,7 +21,10 @@ class CompanySmtpSettings
   def self.from_address(company)
     return nil unless company&.smtp_enabled? && company.smtp_from_email.present?
 
-    name = company.smtp_from_name.presence || company.name
+    name = company.smtp_from_name.presence ||
+           (company.branding_enabled? && company.brand_from_email_name.presence) ||
+           company.branded_name
+
     %("#{name.to_s.delete('"')}" <#{company.smtp_from_email}>)
   end
 end

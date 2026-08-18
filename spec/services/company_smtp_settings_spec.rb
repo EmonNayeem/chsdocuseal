@@ -94,12 +94,45 @@ RSpec.describe CompanySmtpSettings do
       expect(described_class.from_address(company)).to eq('"Acme Corp" <no-reply@example.com>')
     end
 
-    it 'formats from address with from_name when present' do
+    it 'formats from address with from_name when present, ignoring branding' do
       company.smtp_enabled = true
       company.name = 'Acme Corp'
       company.smtp_from_email = 'no-reply@example.com'
       company.smtp_from_name = 'Acme Support'
+      company.branding_enabled = true
+      company.brand_from_email_name = 'Branded Support'
+      company.brand_name = 'Branded Acme'
       expect(described_class.from_address(company)).to eq('"Acme Support" <no-reply@example.com>')
+    end
+
+    it 'formats from address with brand_from_email_name when branding enabled and smtp_from_name blank' do
+      company.smtp_enabled = true
+      company.name = 'Acme Corp'
+      company.smtp_from_email = 'no-reply@example.com'
+      company.branding_enabled = true
+      company.brand_from_email_name = 'Branded Support'
+      company.brand_name = 'Branded Acme'
+      expect(described_class.from_address(company)).to eq('"Branded Support" <no-reply@example.com>')
+    end
+
+    it 'formats from address with brand_name when branding enabled and brand_from_email_name blank' do
+      company.smtp_enabled = true
+      company.name = 'Acme Corp'
+      company.smtp_from_email = 'no-reply@example.com'
+      company.branding_enabled = true
+      company.brand_from_email_name = nil
+      company.brand_name = 'Branded Acme'
+      expect(described_class.from_address(company)).to eq('"Branded Acme" <no-reply@example.com>')
+    end
+
+    it 'ignores branding fields when branding_enabled is false' do
+      company.smtp_enabled = true
+      company.name = 'Acme Corp'
+      company.smtp_from_email = 'no-reply@example.com'
+      company.branding_enabled = false
+      company.brand_from_email_name = 'Branded Support'
+      company.brand_name = 'Branded Acme'
+      expect(described_class.from_address(company)).to eq('"Acme Corp" <no-reply@example.com>')
     end
   end
 end
