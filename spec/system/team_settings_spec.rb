@@ -251,5 +251,43 @@ RSpec.describe 'Team Settings' do
       visit edit_settings_company_path(company)
       expect(page).to have_content('Access denied.')
     end
+
+    it 'allows platform admin to open company edit page and update branding settings' do
+      current_user.update(platform_admin: true)
+      visit settings_companies_path
+
+      within('tr', text: 'Acme Corp') do
+        click_link 'Edit Settings'
+      end
+
+      expect(page).to have_content('Branding Settings')
+      expect(page).to have_content(
+        'These branding settings are saved but are not yet applied to the app, emails, PDFs, or favicon.'
+      )
+
+      # Validation errors test
+      check 'Enable Company Branding'
+      fill_in 'Primary Color', with: 'not-a-color'
+      click_button 'Save'
+
+      expect(page).to have_content("Brand name can't be blank")
+      expect(page).to have_content('Brand primary color is invalid')
+
+      # Successful update test
+      fill_in 'Brand Name', with: 'Acme Custom Brand'
+      fill_in 'Brand From Email Name', with: 'Acme Info'
+      fill_in 'Primary Color', with: '#1A73E8'
+      fill_in 'Logo Key', with: 'logo123'
+      fill_in 'Icon Key', with: 'icon123'
+      click_button 'Save'
+
+      expect(page).to have_content('Company settings updated successfully.')
+      expect(company.reload.branding_enabled).to be true
+      expect(company.brand_name).to eq('Acme Custom Brand')
+      expect(company.brand_from_email_name).to eq('Acme Info')
+      expect(company.brand_primary_color).to eq('#1A73E8')
+      expect(company.brand_logo_key).to eq('logo123')
+      expect(company.brand_icon_key).to eq('icon123')
+    end
   end
 end
