@@ -98,4 +98,42 @@ RSpec.describe ApplicationMailer, type: :mailer do
       expect(metadata).not_to have_key('company_id')
     end
   end
+
+  describe '#branded_company_name_for' do
+    let(:mailer) { described_class.new }
+    let(:account) { Account.create!(name: 'Test Account') }
+
+    it 'returns branded name when branding is enabled and brand name is present' do
+      company = Company.create!(account: account, name: 'Acme Corp', code: 'acme')
+      company.update!(branding_enabled: true, brand_name: 'Acme Super Brand')
+      user = User.new(id: 1, company_id: company.id)
+
+      result = mailer.branded_company_name_for(user)
+      expect(result).to eq('Acme Super Brand')
+    end
+
+    it 'falls back to company.name when branding is disabled' do
+      company = Company.create!(account: account, name: 'Acme Corp', code: 'acme')
+      company.update!(branding_enabled: false, brand_name: 'Acme Super Brand')
+      user = User.new(id: 1, company_id: company.id)
+
+      result = mailer.branded_company_name_for(user)
+      expect(result).to eq('Acme Corp')
+    end
+
+    it 'returns fallback string when no safe company context exists' do
+      user = User.new(id: 1, company_id: nil)
+
+      result = mailer.branded_company_name_for(user, fallback: 'Fallback Account Name')
+      expect(result).to eq('Fallback Account Name')
+    end
+
+    it 'does not raise when standard error occurs, but returns fallback instead' do
+      user = User.new(id: 1)
+      allow(user).to receive(:company_id).and_raise(StandardError)
+
+      result = mailer.branded_company_name_for(user, fallback: 'Safe Fallback')
+      expect(result).to eq('Safe Fallback')
+    end
+  end
 end
