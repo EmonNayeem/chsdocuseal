@@ -82,7 +82,9 @@
               </td>
               <td>
                 <% if user.company %>
-                  <span class="badge badge-outline whitespace-nowrap"><%= user.company.name %></span>
+                  <span class="badge badge-outline whitespace-nowrap" title="<%= user.company.name if user.company.branding_enabled? && user.company.brand_name.present? && user.company.brand_name != user.company.name %>">
+                    <%= user.company.branded_name %>
+                  </span>
                 <% else %>
                   <span class="opacity-60">No company</span>
                 <% end %>

@@ -214,7 +214,7 @@ RSpec.describe 'Team Settings' do
         click_link 'Edit Settings'
       end
 
-      expect(page).to have_content('Edit Company')
+      expect(page).to have_content('Edit Acme Corp')
       expect(page).to have_content('These SMTP settings are saved but are not yet used for sending emails.')
 
       # Validation errors test
@@ -288,6 +288,35 @@ RSpec.describe 'Team Settings' do
       expect(company.brand_primary_color).to eq('#1A73E8')
       expect(company.brand_logo_key).to eq('logo123')
       expect(company.brand_icon_key).to eq('icon123')
+    end
+
+    it 'displays company.branded_name in safe UI places when branding is enabled' do
+      current_user.update(platform_admin: true, company: company)
+
+      # Branding disabled initially -> shows company.name
+      visit settings_companies_path
+      expect(page).to have_content('Acme Corp')
+
+      visit settings_users_path
+      expect(page).to have_content('Acme Corp')
+
+      # Enable branding
+      company.update!(branding_enabled: true, brand_name: 'Acme Super Brand')
+
+      # Companies settings list shows branded_name and legal name underneath
+      visit settings_companies_path
+      expect(page).to have_content('Acme Super Brand')
+      expect(page).to have_selector("div[title='Legal Name']", text: 'Acme Corp')
+
+      # Users list company badge shows branded_name and legal name on hover
+      visit settings_users_path
+      expect(page).to have_content('Acme Super Brand')
+      expect(page).to have_selector("span[title='Acme Corp']", text: 'Acme Super Brand')
+
+      # Company edit page uses branded_name in header but keeps legal name in disabled field
+      visit edit_settings_company_path(company)
+      expect(page).to have_content('Edit Acme Super Brand')
+      expect(page).to have_field('Name', with: 'Acme Corp', disabled: true)
     end
   end
 end
