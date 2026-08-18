@@ -196,4 +196,27 @@ RSpec.describe Company, type: :model do
       expect(company.branded_name).to eq('Original Name')
     end
   end
+
+  describe '#branded_primary_color' do
+    let(:account) { create(:account) }
+    let(:company) { described_class.new(account: account, name: 'Original Name', code: 'test') }
+
+    it 'returns color when branding is enabled and color is present' do
+      company.branding_enabled = true
+      company.brand_primary_color = '#123456'
+      expect(company.branded_primary_color).to eq('#123456')
+    end
+
+    it 'returns nil when branding is disabled even if color is present' do
+      company.branding_enabled = false
+      company.brand_primary_color = '#123456'
+      expect(company.branded_primary_color).to be_nil
+    end
+
+    it 'returns nil if enabled but color is blank' do
+      company.branding_enabled = true
+      company.brand_primary_color = '   '
+      expect(company.branded_primary_color).to be_nil
+    end
+  end
 end

@@ -70,4 +70,8 @@ class Company < ApplicationRecord
   def branded_name
     (branding_enabled? && brand_name.presence) || name
   end
+
+  def branded_primary_color
+    brand_primary_color.presence if branding_enabled?
+  end
 end
