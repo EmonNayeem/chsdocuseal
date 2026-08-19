@@ -105,7 +105,7 @@
         href="https://www.docuseal.com/start"
         target="_blank"
         class="underline"
-      >CHS DocuSeal</a> - {{ t('open_source_documents_software') }}
+      >eDocument Centre</a> - {{ t('open_source_documents_software') }}
     </div>
   </div>
 </template>
