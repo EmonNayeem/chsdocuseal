@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class AddSecondaryAndAccentColorsToCompanies < ActiveRecord::Migration[7.0]
   def change
     add_column :companies, :brand_secondary_color, :string

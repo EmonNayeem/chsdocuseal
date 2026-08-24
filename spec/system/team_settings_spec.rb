@@ -265,29 +265,29 @@ RSpec.describe 'Team Settings' do
         'These branding settings are saved but are not yet applied to the app, emails, PDFs, or favicon.'
       )
 
+      # Ensure removed fields are not present
+      expect(page).to have_no_field('Primary Color')
+      expect(page).to have_no_field('Secondary Color')
+      expect(page).to have_no_field('Accent Color')
+      expect(page).to have_no_field('Logo Key')
+      expect(page).to have_no_field('Icon Key')
+
       # Validation errors test
       check 'Enable Company Branding'
-      fill_in 'Primary Color', with: 'not-a-color'
+      fill_in 'Brand Name', with: ''
       click_button 'Save'
 
       expect(page).to have_content("Brand name can't be blank")
-      expect(page).to have_content('Brand primary color is invalid')
 
       # Successful update test
       fill_in 'Brand Name', with: 'Acme Custom Brand'
       fill_in 'Brand From Email Name', with: 'Acme Info'
-      fill_in 'Primary Color', with: '#1A73E8'
-      fill_in 'Logo Key', with: 'logo123'
-      fill_in 'Icon Key', with: 'icon123'
       click_button 'Save'
 
       expect(page).to have_content('Company settings updated successfully.')
       expect(company.reload.branding_enabled).to be true
       expect(company.brand_name).to eq('Acme Custom Brand')
       expect(company.brand_from_email_name).to eq('Acme Info')
-      expect(company.brand_primary_color).to eq('#1A73E8')
-      expect(company.brand_logo_key).to eq('logo123')
-      expect(company.brand_icon_key).to eq('icon123')
     end
 
     it 'displays company.branded_name in safe UI places when branding is enabled' do
@@ -317,35 +317,6 @@ RSpec.describe 'Team Settings' do
       visit edit_settings_company_path(company)
       expect(page).to have_content('Edit Acme Super Brand')
       expect(page).to have_field('Name', with: 'Acme Corp', disabled: true)
-    end
-
-    it 'applies company branded primary color CSS variable when enabled' do
-      current_user.update(platform_admin: true, company: company)
-      company.update!(branding_enabled: true, brand_name: 'Acme Super Brand', brand_primary_color: '#123456')
-
-      visit edit_settings_company_path(company)
-
-      expect(page).to have_selector('div[style*="--company-primary-color: #123456"]')
-      expect(page).to have_selector('h1[style*="color: var(--company-primary-color)"]')
-      expect(page).to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
-    end
-
-    it 'does not apply CSS variable when branding disabled or color blank' do
-      current_user.update(platform_admin: true, company: company)
-
-      # Disabled
-      company.update!(branding_enabled: false, brand_name: 'Acme Super Brand', brand_primary_color: '#123456')
-      visit edit_settings_company_path(company)
-      expect(page).not_to have_selector('div[style*="--company-primary-color:"]')
-      expect(page).not_to have_selector('h1[style*="color: var(--company-primary-color)"]')
-      expect(page).not_to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
-
-      # Enabled but blank color
-      company.update!(branding_enabled: true, brand_primary_color: '   ')
-      visit edit_settings_company_path(company)
-      expect(page).not_to have_selector('div[style*="--company-primary-color:"]')
-      expect(page).not_to have_selector('h1[style*="color: var(--company-primary-color)"]')
-      expect(page).not_to have_selector('div.divider[style*="color: var(--company-primary-color)"]')
     end
   end
 end
