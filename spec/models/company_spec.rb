@@ -6,11 +6,13 @@
 #
 #  id                        :bigint           not null, primary key
 #  active                    :boolean          default(TRUE), not null
+#  brand_accent_color        :string
 #  brand_from_email_name     :string
 #  brand_icon_key            :string
 #  brand_logo_key            :string
 #  brand_name                :string
 #  brand_primary_color       :string
+#  brand_secondary_color     :string
 #  branding_enabled          :boolean          default(FALSE), not null
 #  code                      :string           not null
 #  name                      :string           not null

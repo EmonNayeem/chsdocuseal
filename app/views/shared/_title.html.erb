@@ -1,2 +1,3 @@
+<% branding = respond_to?(:current_branding) ? current_branding : CompanyBranding.new(nil) %>
 <%= render 'shared/logo' %>
-<span>eDocument Centre</span>
+<span><%= branding.site_name %></span>

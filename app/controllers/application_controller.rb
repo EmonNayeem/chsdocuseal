@@ -20,20 +20,12 @@ class ApplicationController < ActionController::Base
                 :true_ability,
                 :form_link_host,
                 :svg_icon,
-                :branded_primary_color_style
+                :current_branding
 
-  def branded_primary_color_style
-    company = if instance_variable_defined?(:@company) && @company.is_a?(Company)
-                @company
-              else
-                current_user.respond_to?(:company) ? current_user.company : nil
-              end
-    return nil unless company.respond_to?(:branded_primary_color)
-
-    color = company.branded_primary_color
-    return nil if color.blank?
-
-    "--company-primary-color: #{color};"
+  def current_branding
+    @current_branding ||= CompanyBranding.new(
+      current_user.respond_to?(:company) ? current_user.company : nil
+    )
   end
 
   impersonates :user, with: ->(uuid) { User.find_by(uuid:) }

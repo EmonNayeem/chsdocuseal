@@ -6,11 +6,13 @@
 #
 #  id                        :bigint           not null, primary key
 #  active                    :boolean          default(TRUE), not null
+#  brand_accent_color        :string
 #  brand_from_email_name     :string
 #  brand_icon_key            :string
 #  brand_logo_key            :string
 #  brand_name                :string
 #  brand_primary_color       :string
+#  brand_secondary_color     :string
 #  branding_enabled          :boolean          default(FALSE), not null
 #  code                      :string           not null
 #  name                      :string           not null
@@ -66,7 +68,8 @@ class Company < ApplicationRecord
   end
 
   validates :brand_primary_color, format: { with: /\A#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})\z/, allow_blank: true }
-
+  validates :brand_secondary_color, format: { with: /\A#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})\z/, allow_blank: true }
+  validates :brand_accent_color, format: { with: /\A#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})\z/, allow_blank: true }
   def branded_name
     (branding_enabled? && brand_name.presence) || name
   end

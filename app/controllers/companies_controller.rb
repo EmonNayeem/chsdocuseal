@@ -35,7 +35,8 @@ class CompaniesController < ApplicationController
       :smtp_user_name, :smtp_password, :smtp_authentication,
       :smtp_enable_starttls_auto, :smtp_from_email, :smtp_from_name,
       :branding_enabled, :brand_name, :brand_from_email_name,
-      :brand_primary_color, :brand_logo_key, :brand_icon_key
+      :brand_primary_color, :brand_secondary_color, :brand_accent_color,
+      :brand_logo_key, :brand_icon_key
     )
     p.delete(:smtp_password) if p[:smtp_password].blank?
     p

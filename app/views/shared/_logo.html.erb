@@ -1,5 +1,6 @@
-<img src="/chs-icon.svg"
-     alt="eDocument Centre"
+<% branding = respond_to?(:current_branding) ? current_branding : CompanyBranding.new(nil) %>
+<img src="<%= branding.logo_url || '/chs-icon.svg' %>"
+     alt="<%= branding.site_name %>"
      width="<%= local_assigns.fetch(:width, '37') %>"
      height="<%= local_assigns.fetch(:height, '37') %>"
      class="<%= local_assigns[:class] %>">
