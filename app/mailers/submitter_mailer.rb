@@ -27,6 +27,8 @@ class SubmitterMailer < ApplicationMailer
     @email_config = AccountConfigs.find_for_account(@current_account, AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY)
     @body ||= fetch_config_email_body(@email_config, @submitter)
 
+    apply_company_email_defaults!(@submitter)
+
     assign_message_metadata('submitter_invitation', @submitter)
 
     reply_to = build_submitter_reply_to(@submitter, email_config: @email_config)
@@ -65,6 +67,8 @@ class SubmitterMailer < ApplicationMailer
 
     @email_config = AccountConfigs.find_for_account(@current_account, AccountConfig::SUBMITTER_VIEW_INVITATION_EMAIL_KEY)
     @body ||= fetch_config_email_body(@email_config, @submitter)
+
+    apply_company_email_defaults!(@submitter)
 
     assign_message_metadata('submitter_view_invitation', @submitter)
 
@@ -191,6 +195,14 @@ class SubmitterMailer < ApplicationMailer
   end
 
   private
+
+  def apply_company_email_defaults!(submitter)
+    return if @body.present? && @subject.present?
+
+    company = CompanyEmailDefaults.company_for_submitter(submitter)
+    @body = CompanyEmailDefaults.invitation_body(company) if @body.blank?
+    @subject = CompanyEmailDefaults.invitation_subject(company) if @subject.blank?
+  end
 
   def build_submitter_reply_to(submitter, email_config: nil, documents_copy_email: nil)
     reply_to = submitter.preferences['reply_to'].presence
