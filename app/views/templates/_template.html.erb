@@ -74,6 +74,13 @@
           </a>
         </span>
       <% end %>
+      <% if current_user.platform_admin? || (current_user.department_acl_admin? && template.company_id == current_user.company_id) %>
+        <span class="tooltip tooltip-left" data-tip="<%= t('copy_template', default: 'Copy Template') %>">
+          <a href="<%= new_template_copy_path(template) %>" data-turbo-frame="modal" class="btn btn-xs hover:btn-outline bg-base-200 btn-circle">
+            <%= svg_icon('document_duplicate', class: 'w-4 h-4') || svg_icon('clipboard_document', class: 'w-4 h-4') || svg_icon('copy', class: 'w-4 h-4') %>
+          </a>
+        </span>
+      <% end %>
       <% if can?(:destroy, template) %>
         <span class="tooltip tooltip-left" data-tip="<%= template.archived_at? ? t('delete') : t('archive') %>">
           <%= button_to template_path(template), data: template.archived_at? ? { turbo_confirm: t('template_deletion_is_irreversible_and_will_permanently_remove_all_associated_signed_documents_with_it_are_you_sure_') } : {}, params: { permanently: template.archived_at? }.compact_blank, method: :delete, class: 'btn btn-xs hover:btn-outline bg-base-200 btn-circle', aria_label: t('restore') do %>

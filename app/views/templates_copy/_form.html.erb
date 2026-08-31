@@ -1,0 +1,48 @@
+<%= form_for @template, url: template_copy_index_path(@base_template), data: { turbo_frame: :_top }, html: { autocomplete: :off } do |f| %>
+  <% if current_user.platform_admin? %>
+    <div class="form-control mt-2">
+      <label class="label"><span class="label-text"><%= t('target_company', default: 'Target Company') %></span></label>
+      <%= select_tag :company_id, options_for_select(Company.order(:name).map { |c| [c.name, c.id] }, @base_template.company_id), required: true, class: 'base-select' %>
+    </div>
+
+    <% companies_with_depts = Company.includes(:departments).where.not(departments: { id: nil }).order(:name) %>
+    <% if companies_with_depts.any? %>
+      <div class="form-control mt-4">
+        <label class="label"><span class="label-text"><%= t('target_departments', default: 'Target Departments') %></span></label>
+        <%= select_tag 'department_ids[]', option_groups_from_collection_for_select(companies_with_depts, :departments, :name, :id, :name, @base_template.department_ids), multiple: true, class: 'base-select' %>
+      </div>
+    <% end %>
+
+    <% companies_with_folders = Company.includes(:template_folders).where.not(template_folders: { id: nil }).order(:name) %>
+    <% if companies_with_folders.any? %>
+      <div class="form-control mt-4">
+        <label class="label"><span class="label-text"><%= t('target_folder', default: 'Target Folder') %></span></label>
+        <%= select_tag 'folder_id', option_groups_from_collection_for_select(companies_with_folders, :template_folders, :name, :id, :name, @base_template.folder_id), include_blank: true, class: 'base-select' %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="form-control mt-4">
+    <%= f.text_field :name, placeholder: t('document_name', default: 'Template Name'), class: 'base-input', dir: 'auto' %>
+  </div>
+
+  <% if current_user.department_acl_admin? && !current_user.platform_admin? %>
+    <% if current_user.company.departments.any? %>
+      <div class="form-control mt-4">
+        <label class="label"><span class="label-text"><%= t('target_departments', default: 'Target Departments') %></span></label>
+        <%= select_tag 'department_ids[]', options_from_collection_for_select(current_user.company.departments.order(:name), :id, :name, @base_template.department_ids), multiple: true, class: 'base-select' %>
+      </div>
+    <% end %>
+
+    <% if current_user.company.template_folders.any? %>
+      <div class="form-control mt-4">
+        <label class="label"><span class="label-text"><%= t('target_folder', default: 'Target Folder') %></span></label>
+        <%= select_tag 'folder_id', options_from_collection_for_select(current_user.company.template_folders.order(:name), :id, :name, @base_template.folder_id), include_blank: true, class: 'base-select' %>
+      </div>
+    <% end %>
+  <% end %>
+
+  <div class="form-control mt-6">
+    <%= f.button button_title(title: t('copy_template', default: 'Copy Template'), disabled_with: t('copying', default: 'Copying...')), class: 'base-button' %>
+  </div>
+<% end %>

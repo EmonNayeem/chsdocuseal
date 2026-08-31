@@ -100,6 +100,7 @@ Rails.application.routes.draw do
   resources :templates, only: %i[new create edit update show destroy] do
     resource :departments, only: %i[update], controller: 'templates_departments'
     resources :clone, only: %i[new create], controller: 'templates_clone'
+    resources :copy, only: %i[new create], controller: 'templates_copy'
     resource :debug, only: %i[show], controller: 'templates_debug' if Rails.env.development?
     resources :documents, only: %i[index create], controller: 'template_documents'
     resources :documents_modify, only: %i[create], controller: 'template_documents_modify'
