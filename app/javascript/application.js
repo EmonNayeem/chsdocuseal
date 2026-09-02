@@ -57,6 +57,7 @@ import BarChart from './elements/bar_chart'
 import FieldCondition from './elements/field_condition'
 import ConfirmUpload from './elements/confirm_upload'
 import UserDepartmentsForm from './elements/user_departments_form'
+import './elements/template_copy_form'
 
 import flatpickr from 'flatpickr'
 import 'flatpickr/dist/flatpickr.css'

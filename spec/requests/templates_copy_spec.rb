@@ -24,6 +24,38 @@ RSpec.describe 'Templates Copy UI', type: :request do
         get new_template_copy_path(template)
         expect(response).to have_http_status(:success)
       end
+
+      it 'returns departments and folders for the specified target_company_id' do
+        Department.create!(name: 'C2 Dept', company: target_company, account: account)
+        create(:template_folder, name: 'C2 Folder', company: target_company, account: account)
+
+        Department.create!(name: 'C1 Dept', company: company, account: account)
+        create(:template_folder, name: 'C1 Folder', company: company, account: account)
+
+        get new_template_copy_path(template), params: { target_company_id: target_company.id }
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include('>C2 Dept</option>')
+        expect(response.body).to include('>C2 Folder</option>')
+        expect(response.body).not_to include('>C1 Dept</option>')
+        expect(response.body).not_to include('>C1 Folder</option>')
+      end
+
+      it 'defaults to base template company if no target_company_id provided' do
+        Department.create!(name: 'C2 Dept', company: target_company, account: account)
+        create(:template_folder, name: 'C2 Folder', company: target_company, account: account)
+
+        Department.create!(name: 'C1 Dept', company: company, account: account)
+        create(:template_folder, name: 'C1 Folder', company: company, account: account)
+
+        get new_template_copy_path(template)
+
+        expect(response).to have_http_status(:success)
+        expect(response.body).to include('>C1 Dept</option>')
+        expect(response.body).to include('>C1 Folder</option>')
+        expect(response.body).not_to include('>C2 Dept</option>')
+        expect(response.body).not_to include('>C2 Folder</option>')
+      end
     end
 
     context 'when user is a company admin' do
