@@ -13,8 +13,7 @@ class TemplatesDashboardController < ApplicationController
   def index
     @default_folder = current_account.default_template_folder
 
-    @template_folders =
-      TemplateFolders.filter_active_folders(@template_folders.where(parent_folder_id: nil), @templates)
+    @template_folders = @template_folders.where(parent_folder_id: nil).active
 
     @template_folders = @template_folders.where.not(id: @default_folder.id) if params[:q].blank?
 

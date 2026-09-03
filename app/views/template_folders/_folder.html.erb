@@ -1,13 +1,38 @@
 <% is_long = folder.name.size > 32 %>
 <% icon = folder.default? ? 'folder_star' : 'folder' %>
-<a href="<%= folder_path(folder) %>" class="flex h-full flex-col justify-between rounded-2xl py-5 px-6 w-full bg-base-200 before:border-2 before:border-base-300 before:border-dashed before:absolute before:left-0 before:right-0 before:top-0 before:bottom-0 before:hidden before:rounded-2xl relative" data-targets="dashboard-dropzone.folderCards" data-full-name="<%= folder.full_name %>">
-  <% if !is_long %>
-    <%= svg_icon(icon, class: 'w-6 h-6') %>
-  <% end %>
-  <div class="text-lg font-semibold mt-1" style="overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: <%= is_long ? 2 : 1 %>;">
-    <% if is_long %>
-      <%= svg_icon(icon, class: 'w-6 h-6 inline') %>
+<div class="relative group h-full">
+  <a href="<%= folder_path(folder) %>" class="flex h-full flex-col justify-between rounded-2xl py-5 px-6 w-full bg-base-200 before:border-2 before:border-base-300 before:border-dashed before:absolute before:left-0 before:right-0 before:top-0 before:bottom-0 before:hidden before:rounded-2xl relative" data-targets="dashboard-dropzone.folderCards" data-full-name="<%= folder.full_name %>">
+    <% if !is_long %>
+      <%= svg_icon(icon, class: 'w-6 h-6') %>
     <% end %>
-    <%= folder.name %>
-  </div>
-</a>
+    <div class="text-lg font-semibold mt-1" style="overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: <%= is_long ? 2 : 1 %>;">
+      <% if is_long %>
+        <%= svg_icon(icon, class: 'w-6 h-6 inline') %>
+      <% end %>
+      <%= folder.name %>
+    </div>
+  </a>
+
+  <% if can?(:update, folder) && !folder.default? %>
+    <div class="absolute top-0 bottom-0 w-0 items-center hidden md:group-hover:flex" style="right: 37px" data-targets="dashboard-dropzone.hiddenOnDrag">
+      <div class="space-y-1 flex flex-col justify-center">
+        <% if can?(:update, folder) %>
+          <span class="tooltip tooltip-left" data-tip="<%= t('edit') %>">
+            <a href="<%= edit_folder_path(folder) %>" data-turbo-frame="modal" class="btn btn-xs hover:btn-outline bg-base-200 btn-circle mb-1">
+              <%= svg_icon('pencil', class: 'w-4 h-4') %>
+            </a>
+          </span>
+        <% end %>
+        <% if can?(:destroy, folder) %>
+          <span class="tooltip tooltip-left" data-tip="<%= t('delete') %>">
+            <% has_contents = folder.templates.active.exists? || folder.subfolders.active.exists? %>
+            <% confirm_msg = has_contents ? t('folder_delete_warning_contents', default: 'This folder contains templates and/or subfolders. Deleting it will permanently delete all templates and subfolders inside it. Are you sure?') : t('are_you_sure_you_want_to_delete_this_folder', default: 'Are you sure you want to delete this folder?') %>
+            <%= button_to folder_path(folder, destroy_contents: has_contents), method: :delete, data: { turbo: true, turbo_confirm: confirm_msg }, class: 'btn btn-xs hover:btn-outline bg-base-200 btn-circle text-error/80 hover:text-error' do %>
+              <%= svg_icon('trash', class: 'w-4 h-4') %>
+            <% end %>
+          </span>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+</div>

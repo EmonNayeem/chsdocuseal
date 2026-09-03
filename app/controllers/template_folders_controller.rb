@@ -13,8 +13,7 @@ class TemplateFoldersController < ApplicationController
                          .where(folder: [@template_folder, *(params[:q].present? ? @template_folder.subfolders : [])])
                          .preload(:author, :template_accesses)
 
-    @template_folders =
-      @template_folder.subfolders.where(id: Template.accessible_by(current_ability).active.select(:folder_id))
+    @template_folders = @template_folder.subfolders.accessible_by(current_ability).active
 
     @template_folders = TemplateFolders.search(@template_folders, params[:q])
     @template_folders = TemplateFolders.sort(@template_folders, current_user, selected_order)
@@ -42,7 +41,22 @@ class TemplateFoldersController < ApplicationController
     end
   end
 
+  def new; end
+
   def edit; end
+
+  def create
+    @template_folder.author = current_user
+    @template_folder.account = current_account
+    @template_folder.company_id = current_user.company_id unless current_user.platform_admin?
+
+    if @template_folder.save
+      redirect_to folder_path(@template_folder),
+                  notice: I18n.t('folder_created', default: 'Folder created successfully.')
+    else
+      redirect_to templates_path, alert: @template_folder.errors.full_messages.to_sentence
+    end
+  end
 
   def update
     if @template_folder != current_account.default_template_folder &&
@@ -53,7 +67,40 @@ class TemplateFoldersController < ApplicationController
     end
   end
 
+  def destroy
+    has_contents = @template_folder.templates.active.exists? || @template_folder.subfolders.active.exists?
+
+    if has_contents && params[:destroy_contents].blank?
+      redirect_to folder_path(@template_folder),
+                  alert: I18n.t('folder_not_empty_confirmation',
+                                default: 'Folder contains templates or subfolders. Please confirm to delete.')
+    elsif @template_folder.default?
+      redirect_to folder_path(@template_folder),
+                  alert: I18n.t('cannot_delete_default_folder', default: 'Cannot delete default folder.')
+    else
+      parent_folder = @template_folder.parent_folder
+
+      archive_folder_and_contents(@template_folder)
+
+      redirect_to parent_folder ? folder_path(parent_folder) : templates_path,
+                  notice: I18n.t('folder_deleted', default: 'Folder deleted successfully.')
+    end
+  end
+
   private
+
+  def archive_folder_and_contents(folder)
+    TemplateFolder.transaction do
+      folder.update!(archived_at: Time.current)
+      folder.templates.active.find_each do |template|
+        template.update!(archived_at: Time.current)
+        WebhookUrls.enqueue_events(template, 'template.archived')
+      end
+      folder.subfolders.active.find_each do |subfolder|
+        archive_folder_and_contents(subfolder)
+      end
+    end
+  end
 
   def selected_order
     @selected_order ||=
@@ -65,7 +112,7 @@ class TemplateFoldersController < ApplicationController
   end
 
   def template_folder_params
-    params.require(:template_folder).permit(:name)
+    params.require(:template_folder).permit(:name, :parent_folder_id, :company_id)
   end
 
   def load_related_submissions(template_folder)
