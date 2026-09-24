@@ -1,6 +1,7 @@
 <% if @body.present? %>
   <%= render 'custom_content', content: @body, submitter: @submitter %>
-  <% if !@body.match?(ReplaceEmailVariables::SUBMITTER_LINK) && !@body.match?(ReplaceEmailVariables::SUBMITTER_ID) && !@body.match?(ReplaceEmailVariables::SUBMISSION_LINK) && !@body.match?(ReplaceEmailVariables::TEMPLATE_ID) && !@submitter.submission.source.in?(%w[api embed]) %>
+  <% normalized_body = ReplaceEmailVariables.normalize_editor_variables(@body) %>
+  <% if !normalized_body.match?(ReplaceEmailVariables::SUBMITTER_LINK) && !normalized_body.match?(ReplaceEmailVariables::SUBMITTER_ID) && !normalized_body.match?(ReplaceEmailVariables::SUBMISSION_LINK) && !normalized_body.match?(ReplaceEmailVariables::TEMPLATE_ID) && !@submitter.submission.source.in?(%w[api embed]) %>
     <p><%= link_to nil, submit_form_url(slug: @submitter.slug, t: SubmissionEvents.build_tracking_param(@submitter, 'click_email'), host: @custom_domain || ENV.fetch('EMAIL_HOST', Docuseal.default_url_options[:host])) %></p>
   <% end %>
 <% else %>

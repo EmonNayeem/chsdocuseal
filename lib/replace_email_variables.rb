@@ -30,8 +30,14 @@ module ReplaceEmailVariables
 
   module_function
 
+  def normalize_editor_variables(text)
+    text.to_s.gsub(/\{\[([a-zA-Z0-9_.-\[\]]+)\]\((?:https?:\/\/|mailto:)\1\/?\)\}/, '{\1}')
+  end
+
   # rubocop:disable Metrics
   def call(text, submitter:, tracking_event_type: 'click_email', html_escape: false, sig: nil)
+    text = normalize_editor_variables(text)
+
     text = replace(text, TEMPLATE_NAME, html_escape:) do
       (submitter.template || submitter.submission.template || submitter.submission).name
     end
