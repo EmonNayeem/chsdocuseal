@@ -25,7 +25,7 @@ class SubmitterMailer < ApplicationMailer
                @submitter.template&.preferences&.dig('request_email_subject').presence
 
     @email_config = AccountConfigs.find_for_account(@current_account, AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY)
-    @body ||= fetch_config_email_body(@email_config, @submitter)
+    apply_email_config_defaults!(@email_config, @submitter)
 
     apply_company_email_defaults!(@submitter)
 
@@ -58,15 +58,15 @@ class SubmitterMailer < ApplicationMailer
     template_submitters_index = @email_message.blank? ? build_submitter_preferences_index(@submitter) : {}
 
     @body = @email_message&.normalized_body.presence ||
-            @submitter.template&.preferences&.dig('invitation_view_email_body').presence ||
-            template_submitters_index.dig(@submitter.uuid, 'request_email_body').presence
+            template_submitters_index.dig(@submitter.uuid, 'request_email_body').presence ||
+            @submitter.template&.preferences&.dig('invitation_view_email_body').presence
 
     @subject = @email_message&.subject.presence ||
-               @submitter.template&.preferences&.dig('invitation_view_email_subject').presence ||
-               template_submitters_index.dig(@submitter.uuid, 'request_email_subject').presence
+               template_submitters_index.dig(@submitter.uuid, 'request_email_subject').presence ||
+               @submitter.template&.preferences&.dig('invitation_view_email_subject').presence
 
     @email_config = AccountConfigs.find_for_account(@current_account, AccountConfig::SUBMITTER_VIEW_INVITATION_EMAIL_KEY)
-    @body ||= fetch_config_email_body(@email_config, @submitter)
+    apply_email_config_defaults!(@email_config, @submitter)
 
     apply_company_email_defaults!(@submitter)
 
@@ -195,6 +195,11 @@ class SubmitterMailer < ApplicationMailer
   end
 
   private
+
+  def apply_email_config_defaults!(email_config, submitter)
+    @body ||= fetch_config_email_body(email_config, submitter)
+    @subject ||= email_config.value['subject'].presence if email_config
+  end
 
   def apply_company_email_defaults!(submitter)
     return if @body.present? && @subject.present?

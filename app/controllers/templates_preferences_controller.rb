@@ -34,8 +34,10 @@ class TemplatesPreferencesController < ApplicationController
 
     return head :ok if preferences_to_delete.blank?
 
-    preferences_to_delete.each do |key|
-      @template.preferences.delete(key)
+    if invitation_email_targeted_reset?(config_key)
+      reset_invitation_email_preferences
+    else
+      preferences_to_delete.each { |key| @template.preferences.delete(key) }
     end
 
     @template.save!
@@ -46,6 +48,38 @@ class TemplatesPreferencesController < ApplicationController
   end
 
   private
+
+  def invitation_email_targeted_reset?(config_key)
+    config_key == AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY &&
+      (params[:submitter_uuid].present? || params[:scope] == 'general')
+  end
+
+  def reset_invitation_email_preferences
+    if params[:submitter_uuid].present?
+      reset_submitter_invitation_preferences(params[:submitter_uuid])
+    else
+      reset_general_invitation_preferences
+    end
+  end
+
+  def reset_general_invitation_preferences
+    @template.preferences.delete('request_email_subject')
+    @template.preferences.delete('request_email_body')
+  end
+
+  def reset_submitter_invitation_preferences(uuid)
+    return unless @template.submitters.any? { |s| s['uuid'] == uuid }
+    return unless @template.preferences['submitters'].is_a?(Array)
+
+    @template.preferences['submitters'].each do |pref|
+      next unless pref['uuid'] == uuid
+
+      pref.delete('request_email_subject')
+      pref.delete('request_email_body')
+    end
+
+    @template.preferences['submitters'].reject! { |pref| pref.except('uuid').blank? }
+  end
 
   # rubocop:disable Metrics/MethodLength -- Existing complex method
   def template_params

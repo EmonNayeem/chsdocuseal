@@ -16,8 +16,9 @@ RSpec.describe SubmitterMailer, type: :mailer do
     it 'uses company specific defaults when no custom values exist' do
       mail = described_class.invitation_email(submitter)
 
-      expect(mail.subject).to eq('Materials Direct document request')
-      expect(mail.body.encoded).to include('Materials Direct has sent you a document to review and complete.')
+      company = CompanyEmailDefaults.company_for_submitter(submitter)
+      expect(mail.subject).to eq(CompanyEmailDefaults.invitation_subject(company))
+      expect(mail.body.encoded).to include(CompanyEmailDefaults.invitation_body(company).split("\n")[2].strip)
     end
 
     it 'falls back to CHS defaults for unknown company' do
@@ -27,6 +28,25 @@ RSpec.describe SubmitterMailer, type: :mailer do
 
       expect(mail.subject).to eq('Churchfield Home Services document request')
       expect(mail.body.encoded).to include('Churchfield Home Services has sent you a document to review and complete.')
+    end
+
+    it 'prioritizes account/global config over company default' do
+      config = AccountConfigs.find_or_initialize_for_key(account, AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY)
+      config.value = { 'subject' => 'Global Signer Subject', 'body' => 'Global Signer Body' }
+      config.save!
+
+      mail = described_class.invitation_email(submitter)
+
+      expect(mail.subject).to eq('Global Signer Subject')
+      expect(mail.body.encoded).to include('Global Signer Body')
+
+      config.update!(value: {})
+
+      mail = described_class.invitation_email(submitter)
+
+      company = CompanyEmailDefaults.company_for_submitter(submitter)
+      expect(mail.subject).to eq(CompanyEmailDefaults.invitation_subject(company))
+      expect(mail.body.encoded).to include(CompanyEmailDefaults.invitation_body(company).split("\n")[2].strip)
     end
 
     it 'overrides company defaults with custom template preferences' do
