@@ -42,10 +42,30 @@
         <%= svg_icon('chevron_down', class: 'w-3.5 h-3.5') %>
       </label>
       <div tabindex="0" class="dropdown-content right-0 top-full mt-1 p-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-50">
-        <% local_assigns[:variables]&.each do |variable| %>
-          <button type="button" data-variable="<%= variable %>" data-action="click:<%= editor_tag %>#insertVariable" class="w-full px-2 py-1 rounded-md hover:bg-neutral-100 text-left text-sm cursor-pointer whitespace-nowrap">
-            <%= variable_labels.fetch(variable, "{#{variable}}") %>
-          </button>
+        <% local_assigns[:variables]&.each do |variable_or_group| %>
+          <% if variable_or_group.is_a?(Hash) && variable_or_group.key?(:group) %>
+            <div class="px-2 py-1 text-xs font-bold text-neutral-500 uppercase tracking-wider mt-1">
+              <%= variable_or_group[:group] %>
+            </div>
+            <% variable_or_group[:items]&.each do |variable| %>
+              <%
+                var_value = variable.is_a?(Hash) ? variable[:value] : variable
+                var_label = variable.is_a?(Hash) ? variable[:label] : variable_labels.fetch(variable, "{#{variable}}")
+              %>
+              <button type="button" data-variable="<%= var_value %>" data-action="click:<%= editor_tag %>#insertVariable" class="w-full px-4 py-1 rounded-md hover:bg-neutral-100 text-left text-sm cursor-pointer whitespace-nowrap">
+                <%= var_label %>
+              </button>
+            <% end %>
+          <% else %>
+            <%
+              variable = variable_or_group
+              var_value = variable.is_a?(Hash) ? variable[:value] : variable
+              var_label = variable.is_a?(Hash) ? variable[:label] : variable_labels.fetch(variable, "{#{variable}}")
+            %>
+            <button type="button" data-variable="<%= var_value %>" data-action="click:<%= editor_tag %>#insertVariable" class="w-full px-2 py-1 rounded-md hover:bg-neutral-100 text-left text-sm cursor-pointer whitespace-nowrap">
+              <%= var_label %>
+            </button>
+          <% end %>
         <% end %>
       </div>
     </div>

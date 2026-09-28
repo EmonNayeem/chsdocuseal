@@ -13,6 +13,41 @@ RSpec.describe ReplaceEmailVariables do
     expect(result).to include('Hi John, My Template, John Doe')
   end
 
+  it 'replaces indexed submitter variables correctly' do
+    submitter1 = create(:submitter, submission: submission, name: 'Aisling King', email: 'aisling@example.com', uuid: SecureRandom.uuid)
+    submitter2 = create(:submitter, submission: submission, name: 'Trish Manager', email: 'trish@example.com', uuid: SecureRandom.uuid)
+    submitter3 = create(:submitter, submission: submission, name: 'Ian ICT', email: 'ian@example.com', uuid: SecureRandom.uuid)
+
+    # Setup template submitters to provide context
+    submitters_array = [
+      { 'uuid' => submitter1.uuid, 'name' => 'Employee' },
+      { 'uuid' => submitter2.uuid, 'name' => 'Manager' },
+      { 'uuid' => submitter3.uuid, 'name' => 'ICT Approver' }
+    ]
+    submission.template.update!(submitters: submitters_array)
+    submission.update!(template_submitters: submitters_array)
+
+    text = <<~TEXT
+      For Manager {submitter.name}:
+      {submitter.first_name}
+      {submitters[1].name}
+      {submitters[1].first_name}
+      {submitters[1].email}
+      {submitters[2].name}
+      {submitters[3].name}
+    TEXT
+
+    result = described_class.call(text, submitter: submitter2)
+
+    expect(result).to include('For Manager Trish Manager:')
+    expect(result).to include('Trish')
+    expect(result).to include('Aisling King')
+    expect(result).to include('Aisling')
+    expect(result).to include('aisling@example.com')
+    # Note that {submitters[2].name} refers to index 1 which is submitter2.
+    expect(result).to match(/Trish Manager.+Ian ICT/m)
+  end
+
   it 'fixes auto-linked variables from markdown editor' do
     text = <<~TEXT
       Template: {[template.name](http://template.name)}
