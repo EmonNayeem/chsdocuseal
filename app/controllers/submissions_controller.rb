@@ -104,10 +104,48 @@ class SubmissionsController < ApplicationController
   end
 
   def save_template_message(template, params)
-    template.preferences['request_email_subject'] = params[:subject] if params[:subject].present?
-    template.preferences['request_email_body'] = params[:body] if params[:body].present?
+    if per_submitter_template_message?(params)
+      save_per_submitter_template_messages(template, params[:submitter_preferences])
+    else
+      save_general_template_message(template, params)
+    end
 
     template.save!
+  end
+
+  def per_submitter_template_message?(params)
+    params[:request_email_per_submitter] == '1' && params[:submitter_preferences].respond_to?(:each_pair)
+  end
+
+  def save_general_template_message(template, params)
+    template.preferences['request_email_subject'] = params[:subject] if params[:subject].present?
+    template.preferences['request_email_body'] = params[:body] if params[:body].present?
+  end
+
+  def save_per_submitter_template_messages(template, submitter_preferences)
+    template.preferences['submitters'] ||= []
+
+    submitter_preferences.each_pair do |uuid, prefs|
+      save_per_submitter_template_message(template, uuid, prefs)
+    end
+  end
+
+  def save_per_submitter_template_message(template, uuid, prefs)
+    subject = prefs[:subject] || prefs['subject']
+    body = prefs[:body] || prefs['body']
+    return if subject.blank? && body.blank?
+
+    submitter_pref = template.preferences['submitters'].find { |s| s['uuid'] == uuid }
+    if submitter_pref
+      submitter_pref['request_email_subject'] = subject if subject.present?
+      submitter_pref['request_email_body'] = body if body.present?
+    else
+      template.preferences['submitters'] << {
+        'uuid' => uuid,
+        'request_email_subject' => subject,
+        'request_email_body' => body
+      }
+    end
   end
 
   def submissions_params

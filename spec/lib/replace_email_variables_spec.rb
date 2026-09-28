@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe ReplaceEmailVariables do
@@ -5,7 +7,9 @@ RSpec.describe ReplaceEmailVariables do
   let(:user) { create(:user, account: account, first_name: 'Jane', last_name: 'Smith', email: 'jane@example.com') }
   let(:template) { create(:template, account: account, author: user, name: 'My Template') }
   let(:submission) { create(:submission, account: account, template: template, created_by_user: user) }
-  let(:submitter) { create(:submitter, submission: submission, name: 'John Doe', email: 'john@example.com', uuid: SecureRandom.uuid) }
+  let(:submitter) do
+    create(:submitter, submission: submission, name: 'John Doe', email: 'john@example.com', uuid: SecureRandom.uuid)
+  end
 
   it 'replaces variables correctly' do
     text = 'Hi {submitter.first_name}, {template.name}, {submitter.name}'
@@ -14,9 +18,15 @@ RSpec.describe ReplaceEmailVariables do
   end
 
   it 'replaces indexed submitter variables correctly' do
-    submitter1 = create(:submitter, submission: submission, name: 'Aisling King', email: 'aisling@example.com', uuid: SecureRandom.uuid)
-    submitter2 = create(:submitter, submission: submission, name: 'Trish Manager', email: 'trish@example.com', uuid: SecureRandom.uuid)
-    submitter3 = create(:submitter, submission: submission, name: 'Ian ICT', email: 'ian@example.com', uuid: SecureRandom.uuid)
+    submitter1 = create(
+      :submitter, submission: submission, name: 'Aisling King', email: 'a@example.com', uuid: SecureRandom.uuid
+    )
+    submitter2 = create(
+      :submitter, submission: submission, name: 'Trish Manager', email: 't@example.com', uuid: SecureRandom.uuid
+    )
+    submitter3 = create(
+      :submitter, submission: submission, name: 'Ian ICT', email: 'i@example.com', uuid: SecureRandom.uuid
+    )
 
     # Setup template submitters to provide context
     submitters_array = [
@@ -43,7 +53,7 @@ RSpec.describe ReplaceEmailVariables do
     expect(result).to include('Trish')
     expect(result).to include('Aisling King')
     expect(result).to include('Aisling')
-    expect(result).to include('aisling@example.com')
+    expect(result).to include('a@example.com')
     # Note that {submitters[2].name} refers to index 1 which is submitter2.
     expect(result).to match(/Trish Manager.+Ian ICT/m)
   end
@@ -77,10 +87,10 @@ RSpec.describe ReplaceEmailVariables do
       Domain: normal.name
       Email: someone@example.com
     TEXT
-    
+
     result = described_class.call(text, submitter: submitter)
 
-    expect(result).to match(/Link: \[https?:\/\/[^\]]+\]\(https:\/\/example\.com\)/)
+    expect(result).to match(%r{Link: \[https?://[^\]]+\]\(https://example\.com\)})
     expect(result).to include('URL: https://example.com')
     expect(result).to include('Domain: normal.name')
     expect(result).to include('Email: someone@example.com')
@@ -88,17 +98,25 @@ RSpec.describe ReplaceEmailVariables do
 
   describe '.normalize_editor_variables' do
     it 'unwraps tiptap autolink formatting for variables' do
-      expect(described_class.normalize_editor_variables('{[submitter.link](http://submitter.link)}')).to eq('{submitter.link}')
-      expect(described_class.normalize_editor_variables('{[submitter.link](http://submitter.link/)}')).to eq('{submitter.link}')
-      expect(described_class.normalize_editor_variables('{[submitter.name](http://submitter.name)}')).to eq('{submitter.name}')
-      expect(described_class.normalize_editor_variables('{[submitter.name](http://submitter.name/)}')).to eq('{submitter.name}')
-      expect(described_class.normalize_editor_variables('{[submitter.email](mailto:submitter.email)}')).to eq('{submitter.email}')
+      expect(described_class.normalize_editor_variables('{[submitter.link](http://submitter.link)}'))
+        .to eq('{submitter.link}')
+      expect(described_class.normalize_editor_variables('{[submitter.link](http://submitter.link/)}'))
+        .to eq('{submitter.link}')
+      expect(described_class.normalize_editor_variables('{[submitter.name](http://submitter.name)}'))
+        .to eq('{submitter.name}')
+      expect(described_class.normalize_editor_variables('{[submitter.name](http://submitter.name/)}'))
+        .to eq('{submitter.name}')
+      expect(described_class.normalize_editor_variables('{[submitter.email](mailto:submitter.email)}'))
+        .to eq('{submitter.email}')
     end
 
     it 'leaves plain links and custom markdown links alone' do
-      expect(described_class.normalize_editor_variables('[Review and Sign]({submitter.link})')).to eq('[Review and Sign]({submitter.link})')
-      expect(described_class.normalize_editor_variables('[Website](https://example.com)')).to eq('[Website](https://example.com)')
-      expect(described_class.normalize_editor_variables('http://normal.name/')).to eq('http://normal.name/')
+      expect(described_class.normalize_editor_variables('[Review and Sign]({submitter.link})'))
+        .to eq('[Review and Sign]({submitter.link})')
+      expect(described_class.normalize_editor_variables('[Website](https://example.com)'))
+        .to eq('[Website](https://example.com)')
+      expect(described_class.normalize_editor_variables('http://normal.name/'))
+        .to eq('http://normal.name/')
     end
   end
 end

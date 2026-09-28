@@ -69,12 +69,7 @@
         <%= f.label :message, t('body'), class: 'label' %>
         <% body_variables = invitation_email_variables(template) %>
         <%= render 'personalization_settings/email_body_editor', name: f.field_name(:body), value: local_assigns[:submitter_email_message]&.normalized_body.presence || (is_edit_viewer ? view_template_body : nil) || submitter_preferences_index.dig(local_assigns[:submitter]&.uuid, 'request_email_body').presence || (is_edit_viewer ? view_config.value['body'] : default_body), variables: body_variables %>
-        <% if !local_assigns.fetch(:disable_save_as_default_template_option, false) && config.value['body_type'] != 'html' %>
-          <label for="<%= uuid = SecureRandom.uuid %>" class="flex items-center cursor-pointer">
-            <%= check_box_tag :save_message, id: uuid, class: 'base-checkbox', checked: false %>
-            <span class="label"><%= t('save_as_default_template_message') %></span>
-          </label>
-        <% end %>
+
       </div>
       <%= render 'submissions/message_fields' %>
     </div>
@@ -113,5 +108,13 @@
         <% end %>
       </div>
     <% end %>
+    <div class="mt-2">
+        <% if !local_assigns.fetch(:disable_save_as_default_template_option, false) && config.value['body_type'] != 'html' %>
+          <label for="<%= uuid = SecureRandom.uuid %>" class="flex items-center cursor-pointer">
+            <%= check_box_tag :save_message, id: uuid, class: 'base-checkbox', checked: false %>
+            <span class="label"><%= t('save_as_default_template_message') %></span>
+          </label>
+        <% end %>
+    </div>
   </div>
 </div>

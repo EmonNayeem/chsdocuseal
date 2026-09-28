@@ -46,7 +46,7 @@ RSpec.describe SubmitterMailer, type: :mailer do
       mail = described_class.invitation_email(submitter)
 
       # submitter.link is replaced with the URL, and MarkdownToHtml autolinks it, so it appears in href and text (2 times)
-      expect(mail.body.encoded.scan(/\/s\/#{submitter.slug}/).size).to eq(2)
+      expect(mail.body.encoded.scan(%r{/s/#{submitter.slug}}).size).to eq(2)
     end
 
     it 'appends the fallback link when body genuinely contains no link' do
@@ -56,7 +56,7 @@ RSpec.describe SubmitterMailer, type: :mailer do
       mail = described_class.invitation_email(submitter)
 
       # The fallback link will be appended (link_to nil, url), so it appears in href and text (2 times)
-      expect(mail.body.encoded.scan(/\/s\/#{submitter.slug}/).size).to eq(2)
+      expect(mail.body.encoded.scan(%r{/s/#{submitter.slug}}).size).to eq(2)
     end
   end
 

@@ -48,20 +48,16 @@
               <%= variable_or_group[:group] %>
             </div>
             <% variable_or_group[:items]&.each do |variable| %>
-              <%
-                var_value = variable.is_a?(Hash) ? variable[:value] : variable
-                var_label = variable.is_a?(Hash) ? variable[:label] : variable_labels.fetch(variable, "{#{variable}}")
-              %>
+              <% var_value = variable.is_a?(Hash) ? variable[:value] : variable
+                 var_label = variable.is_a?(Hash) ? variable[:label] : variable_labels.fetch(variable, "{#{variable}}") %>
               <button type="button" data-variable="<%= var_value %>" data-action="click:<%= editor_tag %>#insertVariable" class="w-full px-4 py-1 rounded-md hover:bg-neutral-100 text-left text-sm cursor-pointer whitespace-nowrap">
                 <%= var_label %>
               </button>
             <% end %>
           <% else %>
-            <%
-              variable = variable_or_group
-              var_value = variable.is_a?(Hash) ? variable[:value] : variable
-              var_label = variable.is_a?(Hash) ? variable[:label] : variable_labels.fetch(variable, "{#{variable}}")
-            %>
+            <% variable = variable_or_group
+               var_value = variable.is_a?(Hash) ? variable[:value] : variable
+               var_label = variable.is_a?(Hash) ? variable[:label] : variable_labels.fetch(variable, "{#{variable}}") %>
             <button type="button" data-variable="<%= var_value %>" data-action="click:<%= editor_tag %>#insertVariable" class="w-full px-2 py-1 rounded-md hover:bg-neutral-100 text-left text-sm cursor-pointer whitespace-nowrap">
               <%= var_label %>
             </button>

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe EmailVariablesHelper, type: :helper do
@@ -27,7 +29,7 @@ RSpec.describe EmailVariablesHelper, type: :helper do
 
     it 'returns grouped variables for each template party' do
       result = helper.invitation_email_variables(template)
-      
+
       expect(result.first[:group]).to eq('General')
       expect(result.first[:items]).to eq(AccountConfig::EMAIL_VARIABLES[AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY])
 
