@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module EmailVariablesHelper
-  def invitation_email_variables(template = nil)
-    base_variables = AccountConfig::EMAIL_VARIABLES[AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY]
+  def template_email_variables(config_key, template = nil)
+    base_variables = AccountConfig::EMAIL_VARIABLES[config_key]
     return base_variables unless template
 
     submitters = template.submitters || []
@@ -22,5 +22,9 @@ module EmailVariablesHelper
     [
       { group: 'General', items: base_variables }
     ] + party_groups
+  end
+
+  def invitation_email_variables(template = nil)
+    template_email_variables(AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY, template)
   end
 end

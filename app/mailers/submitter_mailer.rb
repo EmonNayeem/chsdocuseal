@@ -112,6 +112,8 @@ class SubmitterMailer < ApplicationMailer
     @body = template_preferences['completed_notification_email_body'].presence
     @body ||= fetch_config_email_body(@email_config, @submitter)
 
+    apply_company_completed_defaults!(submitter)
+
     assign_message_metadata('submitter_completed', @submitter)
 
     I18n.with_locale(@current_account.locale) do
@@ -166,6 +168,8 @@ class SubmitterMailer < ApplicationMailer
     @body = template_preferences['documents_copy_email_body'].presence
     @body ||= fetch_config_email_body(@email_config, @submitter)
 
+    apply_company_documents_copy_defaults!(submitter)
+
     assign_message_metadata('submitter_documents_copy', @submitter)
     reply_to = build_submitter_reply_to(submitter, email_config: @email_config, documents_copy_email: true)
 
@@ -207,6 +211,22 @@ class SubmitterMailer < ApplicationMailer
     company = CompanyEmailDefaults.company_for_submitter(submitter)
     @body = CompanyEmailDefaults.invitation_body(company) if @body.blank?
     @subject = CompanyEmailDefaults.invitation_subject(company) if @subject.blank?
+  end
+
+  def apply_company_completed_defaults!(submitter)
+    return if @body.present? && @subject.present?
+
+    company = CompanyEmailDefaults.company_for_submitter(submitter)
+    @body = CompanyEmailDefaults.completed_body(company) if @body.blank?
+    @subject = CompanyEmailDefaults.completed_subject(company) if @subject.blank?
+  end
+
+  def apply_company_documents_copy_defaults!(submitter)
+    return if @body.present? && @subject.present?
+
+    company = CompanyEmailDefaults.company_for_submitter(submitter)
+    @body = CompanyEmailDefaults.documents_copy_body(company) if @body.blank?
+    @subject = CompanyEmailDefaults.documents_copy_subject(company) if @subject.blank?
   end
 
   def build_submitter_reply_to(submitter, email_config: nil, documents_copy_email: nil)

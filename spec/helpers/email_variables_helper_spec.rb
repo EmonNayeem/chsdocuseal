@@ -52,4 +52,58 @@ RSpec.describe EmailVariablesHelper, type: :helper do
       )
     end
   end
+
+  describe '#template_email_variables' do
+    let(:account) { create(:account) }
+    let(:user) { create(:user, account: account) }
+    let(:template) do
+      t = create(:template, author: user, account: account, folder: account.default_template_folder)
+      t.update!(submitters: submitters)
+      t
+    end
+    let(:submitters) do
+      [
+        { 'name' => 'Employee' },
+        { 'name' => 'Manager' }
+      ]
+    end
+
+    it 'returns grouped variables for completed emails' do
+      result = helper.template_email_variables(AccountConfig::SUBMITTER_COMPLETED_EMAIL_KEY, template)
+
+      expect(result.first[:group]).to eq('General')
+      expect(result.first[:items]).to eq(AccountConfig::EMAIL_VARIABLES[AccountConfig::SUBMITTER_COMPLETED_EMAIL_KEY])
+      expect(result.first[:items]).to include(
+        'template.name',
+        'submission.submitters',
+        'submission.link'
+      )
+
+      expect(result.length).to eq(3)
+
+      party1 = result[1]
+      expect(party1[:group]).to eq('Employee')
+      expect(party1[:items]).to include({ label: 'Name', value: 'submitters[1].name' })
+
+      party2 = result[2]
+      expect(party2[:group]).to eq('Manager')
+      expect(party2[:items]).to include({ label: 'Email', value: 'submitters[2].email' })
+    end
+
+    it 'returns grouped variables for documents copy emails' do
+      result = helper.template_email_variables(AccountConfig::SUBMITTER_DOCUMENTS_COPY_EMAIL_KEY, template)
+
+      expect(result.first[:group]).to eq('General')
+      expect(result.first[:items]).to eq(AccountConfig::EMAIL_VARIABLES[AccountConfig::SUBMITTER_DOCUMENTS_COPY_EMAIL_KEY])
+      expect(result.first[:items]).to include(
+        'template.name',
+        'documents.link',
+        'account.name'
+      )
+
+      party1 = result[1]
+      expect(party1[:group]).to eq('Employee')
+      expect(party1[:items]).to include({ label: 'Name', value: 'submitters[1].name' })
+    end
+  end
 end
