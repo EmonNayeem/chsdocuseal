@@ -96,5 +96,24 @@ RSpec.describe 'Templates Preferences Reset', type: :request do
         expect(template.preferences['submitters'].size).to eq(2)
       end
     end
+
+    it 'removes only reminder subject/body and preserves unrelated preferences' do
+      template.update!(
+        preferences: {
+          'invitation_reminder_email_subject' => 'Reminder Sub',
+          'invitation_reminder_email_body' => 'Reminder Body',
+          'request_email_subject' => 'Should Stay'
+        }
+      )
+
+      delete template_preferences_path(template), params: {
+        config_key: AccountConfig::SUBMITTER_INVITATION_REMINDER_EMAIL_KEY
+      }, headers: { 'Accept' => 'text/vnd.turbo-stream.html' }
+
+      template.reload
+      expect(template.preferences['invitation_reminder_email_subject']).to be_nil
+      expect(template.preferences['invitation_reminder_email_body']).to be_nil
+      expect(template.preferences['request_email_subject']).to eq('Should Stay')
+    end
   end
 end

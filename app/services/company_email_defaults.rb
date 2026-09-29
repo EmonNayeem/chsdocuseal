@@ -53,6 +53,29 @@ class CompanyEmailDefaults
       BODY
     end
 
+    def reminder_subject(company)
+      code = extract_code(company)
+      brand_name = COMPANY_BRAND_NAMES[code] || COMPANY_BRAND_NAMES['CHS']
+      "#{brand_name} document reminder"
+    end
+
+    def reminder_body(company)
+      code = extract_code(company)
+      brand_name = COMPANY_BRAND_NAMES[code] || COMPANY_BRAND_NAMES['CHS']
+      <<~BODY
+        Hello,
+
+        This is a reminder that a document is waiting for you to review and complete.
+
+        Please use the link below to continue:
+
+        {submitter.link}
+
+        Thank you,
+        #{brand_name}
+      BODY
+    end
+
     def documents_copy_subject(company)
       code = extract_code(company)
       brand_name = COMPANY_BRAND_NAMES[code] || COMPANY_BRAND_NAMES['CHS']

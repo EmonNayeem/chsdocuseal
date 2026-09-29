@@ -1,0 +1,5 @@
+<%= render 'templates_preferences/accordion_collapse',
+           title: t('reminder_email'),
+           form_id: "#{AccountConfig::SUBMITTER_INVITATION_REMINDER_EMAIL_KEY}_form" do %>
+  <%= render 'templates_preferences/submitter_invitation_reminder_email_form' %>
+<% end %>

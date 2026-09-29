@@ -47,6 +47,37 @@ class SubmitterMailer < ApplicationMailer
     end
   end
 
+  def reminder_email(submitter)
+    @current_account = submitter.submission.account
+    @submitter = submitter
+
+    @body = @submitter.template&.preferences&.dig('invitation_reminder_email_body').presence
+    @subject = @submitter.template&.preferences&.dig('invitation_reminder_email_subject').presence
+
+    @email_config = AccountConfigs.find_for_account(@current_account, AccountConfig::SUBMITTER_INVITATION_REMINDER_EMAIL_KEY)
+    apply_email_config_defaults!(@email_config, @submitter)
+
+    apply_company_reminder_defaults!(@submitter)
+
+    assign_message_metadata('submitter_reminder', @submitter)
+
+    reply_to = build_submitter_reply_to(@submitter, email_config: @email_config)
+
+    maybe_set_custom_domain(@submitter)
+
+    I18n.with_locale(@current_account.locale) do
+      subject_str = @subject || I18n.t(:document_reminder, default: 'Document reminder')
+      subject = ReplaceEmailVariables.call(subject_str, submitter:)
+
+      mail(
+        to: @submitter.friendly_name,
+        from: from_address_for_submitter(submitter),
+        subject:,
+        reply_to:
+      )
+    end
+  end
+
   def invitation_view_email(submitter)
     @current_account = submitter.submission.account
     @submitter = submitter
@@ -211,6 +242,14 @@ class SubmitterMailer < ApplicationMailer
     company = CompanyEmailDefaults.company_for_submitter(submitter)
     @body = CompanyEmailDefaults.invitation_body(company) if @body.blank?
     @subject = CompanyEmailDefaults.invitation_subject(company) if @subject.blank?
+  end
+
+  def apply_company_reminder_defaults!(submitter)
+    return if @body.present? && @subject.present?
+
+    company = CompanyEmailDefaults.company_for_submitter(submitter)
+    @body = CompanyEmailDefaults.reminder_body(company) if @body.blank?
+    @subject = CompanyEmailDefaults.reminder_subject(company) if @subject.blank?
   end
 
   def apply_company_completed_defaults!(submitter)

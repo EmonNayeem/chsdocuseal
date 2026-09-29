@@ -1,0 +1,12 @@
+<% if @body.present? %>
+  <%= render 'custom_content', content: @body, submitter: @submitter %>
+<% else %>
+  <p><%= t('.hello', default: 'Hello,') %></p>
+  <p>
+    <%= t('.this_is_a_reminder', default: 'This is a reminder that a document is waiting for you to review and complete.') %>
+  </p>
+  <p><%= t('.please_use_link', default: 'Please use the link below to continue:') %></p>
+  <p>
+    <%= link_to @submitter.submission.template.name, @submitter.link %>
+  </p>
+<% end %>

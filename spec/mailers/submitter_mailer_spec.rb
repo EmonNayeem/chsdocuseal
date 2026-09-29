@@ -311,4 +311,161 @@ RSpec.describe SubmitterMailer, type: :mailer do
       expect(mail.body.encoded).to include('John Doe jane@example.com')
     end
   end
+
+  describe '#reminder_email' do
+    let(:account) { create(:account) }
+    let(:author) { create(:user, account: account) }
+    let(:template) do
+      author # ensure author exists before calling account.default_template_folder
+      create(
+        :template,
+        account: account,
+        author: author,
+        folder: account.default_template_folder,
+        preferences: {}
+      )
+    end
+    let(:submission) { create(:submission, template: template, account: account) }
+
+    let(:first_uuid) { '11111111-1111-1111-1111-111111111111' }
+    let(:second_uuid) { '22222222-2222-2222-2222-222222222222' }
+
+    let(:submitter) do
+      create(
+        :submitter,
+        submission: submission,
+        name: 'John Doe',
+        email: 'john@example.com',
+        uuid: first_uuid
+      )
+    end
+    let(:mail) { described_class.reminder_email(submitter) }
+
+    it 'falls back to CHS reminder defaults for an unknown company' do
+      unknown =
+        Company.find_by(account: account, code: 'UNKNOWN') ||
+        Company.create!(
+          name: 'UNKNOWN',
+          code: 'UNKNOWN',
+          account: account
+        )
+      template.update!(company: unknown)
+
+      expect(mail.subject).to eq(CompanyEmailDefaults.reminder_subject(unknown))
+      expect(mail.body.encoded).to include('Hello,')
+      expect(mail.body.encoded).to include('This is a reminder')
+      expect(mail.body.encoded).to include(submitter.slug)
+      expect(mail.body.encoded).to include('Churchfield Home Services')
+    end
+
+    it 'uses company reminder default when template/account content absent' do
+      company =
+        Company.find_by(account: account, code: 'MD') ||
+        Company.create!(
+          name: 'MD',
+          code: 'MD',
+          account: account
+        )
+      template.update!(company: company)
+
+      expect(mail.subject).to eq(CompanyEmailDefaults.reminder_subject(company))
+      expect(mail.body.encoded).to include(
+        'This is a reminder that a document is waiting for you to review and complete.'
+      )
+      expect(mail.body.encoded).to include('Materials Direct')
+    end
+
+    it 'account/global reminder config beats company default' do
+      company =
+        Company.find_by(account: account, code: 'MD') ||
+        Company.create!(
+          name: 'MD',
+          code: 'MD',
+          account: account
+        )
+      template.update!(company: company)
+
+      AccountConfig.create!(
+        account: submitter.account,
+        key: AccountConfig::SUBMITTER_INVITATION_REMINDER_EMAIL_KEY,
+        value: { 'subject' => 'Global Subject', 'body' => 'Global Body {submitter.link}' }
+      )
+
+      expect(mail.subject).to eq('Global Subject')
+      expect(mail.body.encoded).to include('Global Body')
+      expect(mail.body.encoded).to include(submitter.slug)
+      expect(mail.body.encoded).not_to include('Materials Direct')
+    end
+
+    it 'template reminder preference beats account config' do
+      AccountConfig.create!(
+        account: submitter.account,
+        key: AccountConfig::SUBMITTER_INVITATION_REMINDER_EMAIL_KEY,
+        value: { 'subject' => 'Global Subject', 'body' => 'Global Body' }
+      )
+      template.update!(
+        preferences: {
+          'invitation_reminder_email_subject' => 'Template Subject',
+          'invitation_reminder_email_body' => 'Template Body {submitter.link}'
+        }
+      )
+
+      expect(mail.subject).to eq('Template Subject')
+      expect(mail.body.encoded).to include('Template Body')
+      expect(mail.body.encoded).to include(submitter.slug)
+    end
+
+    it 'resolves indexed party variables and sender/account variables' do
+      submitter.submission.account.update!(name: 'My Account')
+      author.update!(first_name: 'My', last_name: 'Sender')
+      submitter.submission.update!(created_by_user: author)
+
+      create(
+        :submitter,
+        submission: submission,
+        name: 'Jane Smith',
+        email: 'jane@example.com',
+        uuid: second_uuid
+      )
+
+      template.update!(
+        submitters: [
+          { 'uuid' => first_uuid, 'name' => 'John Doe' },
+          { 'uuid' => second_uuid, 'name' => 'Jane Smith' }
+        ],
+        preferences: {
+          'invitation_reminder_email_subject' => 'Hi {submitters[1].name}',
+          'invitation_reminder_email_body' => 'Body {submitters[2].email} sender {sender.name} acct {account.name}'
+        }
+      )
+      submission.update!(template_submitters: template.submitters)
+
+      party_list = submission.template_submitters || submission.template.submitters
+      expect(party_list[0]['uuid']).to eq(first_uuid)
+      expect(party_list[1]['uuid']).to eq(second_uuid)
+
+      expect(mail.subject).to eq('Hi John Doe')
+      expect(mail.body.encoded).to include('Body jane@example.com sender My Sender acct My Account')
+    end
+
+    it 'IGNORES manual one-off EmailMessage contamination' do
+      email_message = EmailMessage.create!(
+        account: account,
+        author: author,
+        subject: 'Manual Sub',
+        body: 'Manual Body'
+      )
+      submitter.preferences['email_message_uuid'] = email_message.uuid
+      submitter.save!
+
+      # It should fall back to company default (since no template/account overrides)
+      company = CompanyEmailDefaults.company_for_submitter(submitter)
+
+      expect(mail.subject).to eq(
+        CompanyEmailDefaults.reminder_subject(company)
+      )
+      expect(mail.subject).not_to eq('Manual Sub')
+      expect(mail.body.encoded).not_to include('Manual Body')
+    end
+  end
 end
