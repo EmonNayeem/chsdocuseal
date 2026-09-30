@@ -14,6 +14,6 @@ class CreateSubmitterReminderDeliveries < ActiveRecord::Migration[7.0]
 
       t.timestamps
     end
-    add_index :submitter_reminder_deliveries, [:submitter_id, :slot], unique: true
+    add_index :submitter_reminder_deliveries, %i[submitter_id slot], unique: true
   end
 end
