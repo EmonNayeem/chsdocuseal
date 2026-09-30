@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_21_144600) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_29_122903) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -430,6 +430,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_144600) do
     t.index ["template_id"], name: "index_submissions_on_template_id"
   end
 
+  create_table "submitter_reminder_deliveries", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "company_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "due_at", null: false
+    t.string "duration_key", null: false
+    t.datetime "sent_at"
+    t.string "slot", null: false
+    t.string "status", default: "pending", null: false
+    t.bigint "submitter_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_id"], name: "index_submitter_reminder_deliveries_on_account_id"
+    t.index ["company_id"], name: "index_submitter_reminder_deliveries_on_company_id"
+    t.index ["submitter_id", "slot"], name: "index_submitter_reminder_deliveries_on_submitter_id_and_slot", unique: true
+    t.index ["submitter_id"], name: "index_submitter_reminder_deliveries_on_submitter_id"
+  end
+
   create_table "submitter_versions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "email"
@@ -686,6 +703,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_21_144600) do
   add_foreign_key "submissions", "companies"
   add_foreign_key "submissions", "templates"
   add_foreign_key "submissions", "users", column: "created_by_user_id"
+  add_foreign_key "submitter_reminder_deliveries", "accounts"
+  add_foreign_key "submitter_reminder_deliveries", "companies"
+  add_foreign_key "submitter_reminder_deliveries", "submitters"
   add_foreign_key "submitter_versions", "submitters"
   add_foreign_key "submitters", "companies"
   add_foreign_key "submitters", "submissions"

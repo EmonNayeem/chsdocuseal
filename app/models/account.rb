@@ -32,6 +32,7 @@ class Account < ApplicationRecord
           class_name: 'TemplateFolder', dependent: :destroy, inverse_of: :account
   has_many :submissions, dependent: :destroy
   has_many :submitters, dependent: :destroy
+  has_many :submitter_reminder_deliveries, dependent: :destroy
   has_many :account_linked_accounts, dependent: :destroy
   has_many :email_events, dependent: :destroy
   has_many :document_metadata, class_name: 'DocumentMetadata', dependent: :destroy
