@@ -7,6 +7,7 @@ RSpec.describe ScanSubmitterRemindersJob, type: :job do
   let(:user) { create(:user, account: account) }
   let(:template) { create(:template, account: account, author: user) }
   let(:submission) { create(:submission, template: template, account: account) }
+  let(:token) { 'my-scheduler-token' }
 
   let(:submitter_uuid) { submission.template_submitters.first.fetch('uuid') }
   let(:submitter) do
@@ -22,114 +23,180 @@ RSpec.describe ScanSubmitterRemindersJob, type: :job do
   before do
     allow(SubmitterReminders::NextDueSlot).to receive(:call).and_return(nil)
     allow(SendSubmitterReminderEmailJob).to receive(:perform_async)
+    allow(described_class).to receive(:perform_in)
   end
 
-  it 'enqueues exactly one worker job if candidate has due slot' do
-    submitter # create candidate
-    allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('first_duration')
+  context 'when scanner does not own the lease (different token)' do
+    before do
+      allow(SubmitterReminders::ScannerLease).to receive(:verify_or_acquire!).with(token).and_return(false)
+    end
 
-    described_class.new.perform
+    it 'different token owns lease -> old scanner returns -> does NOT scan -> does NOT schedule next run' do
+      submitter # create candidate
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('first_duration')
 
-    expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).with(
-      'submitter_id' => submitter.id,
-      'slot' => 'first_duration'
-    ).once
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SubmitterReminders::NextDueSlot).not_to have_received(:call)
+      expect(SendSubmitterReminderEmailJob).not_to have_received(:perform_async)
+      expect(described_class).not_to have_received(:perform_in)
+    end
   end
 
-  it 'enqueues exactly one job even if multiple overdue slots conceptually exist' do
-    submitter # create candidate
-    # NextDueSlot internally handles only returning one slot
-    allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('second_duration')
+  context 'when scanner owns the lease (same token)' do
+    before do
+      allow(SubmitterReminders::ScannerLease).to receive(:verify_or_acquire!).with(token).and_return(true)
+    end
 
-    described_class.new.perform
+    it 'ownership success allows scanning' do
+      submitter # create candidate
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('first_duration')
 
-    expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).with(
-      'submitter_id' => submitter.id,
-      'slot' => 'second_duration'
-    ).once
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).once
+      expect(described_class).to have_received(:perform_in)
+        .with(described_class::SCAN_INTERVAL, 'scheduler_token' => token).once
+    end
+
+    it 'enqueues exactly one worker job if candidate has due slot and schedules next run with SAME token' do
+      submitter # create candidate
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('first_duration')
+
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).with(
+        'submitter_id' => submitter.id,
+        'slot' => 'first_duration'
+      ).once
+
+      expect(described_class).to have_received(:perform_in)
+        .with(described_class::SCAN_INTERVAL, 'scheduler_token' => token).once
+    end
+
+    it 'enqueues none if submitter is ineligible and still schedules next run with SAME token' do
+      submitter # create candidate
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return(nil)
+
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SendSubmitterReminderEmailJob).not_to have_received(:perform_async)
+      expect(described_class).to have_received(:perform_in)
+        .with(described_class::SCAN_INTERVAL, 'scheduler_token' => token).once
+    end
+
+    it 'successful scan with zero candidates still schedules next run with SAME token' do
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SendSubmitterReminderEmailJob).not_to have_received(:perform_async)
+      expect(described_class).to have_received(:perform_in)
+        .with(described_class::SCAN_INTERVAL, 'scheduler_token' => token).once
+    end
+
+    it 'candidate/worker enqueue failure: exception propagates -> perform_in not called' do
+      submitter # create candidate
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('first_duration')
+      allow(SendSubmitterReminderEmailJob).to receive(:perform_async).and_raise(StandardError, 'Redis unavailable')
+
+      expect do
+        described_class.new.perform('scheduler_token' => token)
+      end.to raise_error(StandardError, 'Redis unavailable')
+
+      expect(described_class).not_to have_received(:perform_in)
+    end
+
+    it 'filters obviously impossible candidates in DB scope (Phase 2B restored coverage)' do
+      create(
+        :submitter,
+        submission: submission,
+        uuid: 'no-email',
+        sent_at: 2.days.ago,
+        email: nil
+      )
+      create(
+        :submitter,
+        submission: submission,
+        uuid: 'completed',
+        sent_at: 2.days.ago,
+        email: 'a@b.com',
+        completed_at: Time.current
+      )
+      create(
+        :submitter,
+        submission: submission,
+        uuid: 'declined',
+        sent_at: 2.days.ago,
+        email: 'a@b.com',
+        declined_at: Time.current
+      )
+      create(
+        :submitter,
+        submission: submission,
+        uuid: 'not-sent',
+        sent_at: nil,
+        email: 'a@b.com'
+      )
+
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SubmitterReminders::NextDueSlot).not_to have_received(:call)
+      expect(described_class).to have_received(:perform_in)
+        .with(described_class::SCAN_INTERVAL, 'scheduler_token' => token).once
+    end
+
+    it 'handles multiple eligible candidate submitters, schedules exactly once (Phase 2B restored coverage)' do
+      submitter1 = submitter
+      submitter2 = create(
+        :submitter,
+        submission: submission,
+        uuid: 'another-uuid',
+        sent_at: 3.days.ago,
+        email: 'test2@example.com'
+      )
+
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter1).and_return('first_duration')
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter2).and_return('second_duration')
+
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).with(
+        'submitter_id' => submitter1.id,
+        'slot' => 'first_duration'
+      ).once
+
+      expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).with(
+        'submitter_id' => submitter2.id,
+        'slot' => 'second_duration'
+      ).once
+
+      expect(described_class).to have_received(:perform_in)
+        .with(described_class::SCAN_INTERVAL, 'scheduler_token' => token).once
+    end
   end
 
-  it 'enqueues none if submitter is ineligible or has no due slot' do
-    submitter # create candidate
-    allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return(nil)
+  context 'when lease is lost during scan' do
+    it 'ownership lost after scan but before reschedule -> old chain does not schedule another copy' do
+      submitter # create candidate
+      allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('first_duration')
 
-    described_class.new.perform
+      # Mock the lease ownership check to succeed the first time, but fail the second time
+      allow(SubmitterReminders::ScannerLease).to receive(:verify_or_acquire!)
+        .with(token).and_return(true, false)
 
-    expect(SendSubmitterReminderEmailJob).not_to have_received(:perform_async)
+      described_class.new.perform('scheduler_token' => token)
+
+      expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).once
+      expect(described_class).not_to have_received(:perform_in)
+    end
   end
 
-  it 'enqueues exactly one for each eligible submitter' do
-    submitter1 = submitter
-    submitter2 = create(
-      :submitter,
-      submission: submission,
-      uuid: 'another-uuid',
-      sent_at: 3.days.ago,
-      email: 'test2@example.com'
-    )
+  context 'when no token is provided' do
+    it 'returns without scanning or scheduling' do
+      submitter
+      described_class.new.perform({})
 
-    allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter1).and_return('first_duration')
-    allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter2).and_return('second_duration')
-
-    described_class.new.perform
-
-    expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).with(
-      'submitter_id' => submitter1.id,
-      'slot' => 'first_duration'
-    ).once
-
-    expect(SendSubmitterReminderEmailJob).to have_received(:perform_async).with(
-      'submitter_id' => submitter2.id,
-      'slot' => 'second_duration'
-    ).once
-  end
-
-  it 'filters obviously impossible candidates in DB scope' do
-    # These should be filtered out by the DB query itself
-    create(
-      :submitter,
-      submission: submission,
-      uuid: 'no-email',
-      sent_at: 2.days.ago,
-      email: nil
-    )
-    create(
-      :submitter,
-      submission: submission,
-      uuid: 'completed',
-      sent_at: 2.days.ago,
-      email: 'a@b.com',
-      completed_at: Time.current
-    )
-    create(
-      :submitter,
-      submission: submission,
-      uuid: 'declined',
-      sent_at: 2.days.ago,
-      email: 'a@b.com',
-      declined_at: Time.current
-    )
-    create(
-      :submitter,
-      submission: submission,
-      uuid: 'not-sent',
-      sent_at: nil,
-      email: 'a@b.com'
-    )
-
-    described_class.new.perform
-
-    # NextDueSlot shouldn't even be called for these
-    expect(SubmitterReminders::NextDueSlot).not_to have_received(:call)
-  end
-
-  it 'propagates systemic enqueue failures' do
-    submitter # create candidate
-    allow(SubmitterReminders::NextDueSlot).to receive(:call).with(submitter).and_return('first_duration')
-    allow(SendSubmitterReminderEmailJob).to receive(:perform_async).and_raise(StandardError, 'Redis unavailable')
-
-    expect do
-      described_class.new.perform
-    end.to raise_error(StandardError, 'Redis unavailable')
+      expect(SubmitterReminders::NextDueSlot).not_to have_received(:call)
+      expect(described_class).not_to have_received(:perform_in)
+    end
   end
 end
