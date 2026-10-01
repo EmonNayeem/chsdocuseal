@@ -182,6 +182,8 @@ safeRegisterElement('template-builder', class extends HTMLElement {
       withVerification: ['true', 'false'].includes(this.dataset.withVerification) ? this.dataset.withVerification === 'true' : null,
       withKba: ['true', 'false'].includes(this.dataset.withKba) ? this.dataset.withKba === 'true' : null,
       withLogo: this.dataset.withLogo !== 'false',
+      logoUrl: this.dataset.logoUrl,
+      logoAlt: this.dataset.logoAlt,
       withFieldsDetection: this.dataset.withFieldsDetection === 'true',
       withDetectExistingFields: this.dataset.withDetectExistingFields === 'true',
       withRevisions: true,
@@ -319,7 +321,7 @@ const applyChsTheme = (theme) => {
   localStorage.setItem('chs-docuseal-theme', theme)
 
   document.querySelectorAll('[data-theme-toggle-icon]').forEach((icon) => {
-    icon.textContent = theme === 'chs-dark' ? '☀️' : '🌙'
+    icon.textContent = theme === 'chs-dark' ? '\u2600\uFE0F' : '\uD83C\uDF19'
   })
 }
 

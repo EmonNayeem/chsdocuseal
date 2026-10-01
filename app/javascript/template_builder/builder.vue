@@ -87,7 +87,10 @@
           v-if="withLogo"
           href="/"
         >
-          <Logo />
+          <Logo
+            :src="logoUrl"
+            :alt="logoAlt"
+          />
         </a>
         <Contenteditable
           v-if="withTitle"
@@ -963,6 +966,16 @@ export default {
       type: Boolean,
       required: false,
       default: true
+    },
+    logoUrl: {
+      type: String,
+      required: false,
+      default: '/chs-icon.svg'
+    },
+    logoAlt: {
+      type: String,
+      required: false,
+      default: 'eDocument Centre'
     },
     onUpload: {
       type: Function,
