@@ -1,11 +1,21 @@
 # frozen_string_literal: true
 
+require 'time'
+
 module SubmitterReminders
   module Due
     module_function
 
     def config_for(account)
       AccountConfigs.find_for_account(account, AccountConfig::SUBMITTER_REMINDERS)&.value || {}
+    end
+
+    def schedule_enabled?(config_hash)
+      return false unless config_hash.is_a?(Hash)
+
+      %w[first_duration second_duration third_duration].any? do |slot|
+        AccountConfigs::REMINDER_DURATIONS.key?(config_hash[slot].to_s)
+      end
     end
 
     def duration_key_for_slot(account, slot)
@@ -37,8 +47,24 @@ module SubmitterReminders
       time >= due_time
     end
 
+    def rollout_eligible?(submitter)
+      return false unless submitter.sent_at
+
+      config = config_for(submitter.account)
+      return false unless schedule_enabled?(config)
+
+      enabled_at_str = config['enabled_at']
+      return false if enabled_at_str.blank?
+
+      enabled_at_time = Time.iso8601(enabled_at_str)
+      submitter.sent_at >= enabled_at_time
+    rescue ArgumentError, TypeError
+      false
+    end
+
     def eligible?(submitter)
       basic_submitter_eligible?(submitter) &&
+        rollout_eligible?(submitter) &&
         submission_eligible?(submitter.submission) &&
         template_eligible?(submitter) &&
         delivery_preferences_eligible?(submitter) &&

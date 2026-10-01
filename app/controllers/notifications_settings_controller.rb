@@ -25,7 +25,40 @@ class NotificationsSettingsController < ApplicationController
     @account_config =
       AccountConfig.find_or_initialize_by(account: current_account, key: email_config_params[:key])
 
-    @account_config.assign_attributes(email_config_params)
+    if @account_config.key == AccountConfig::SUBMITTER_REMINDERS
+      @account_config.value = sanitize_and_prepare_reminder_config(
+        @account_config.value,
+        email_config_params[:value]
+      )
+    else
+      @account_config.assign_attributes(email_config_params.except(:key))
+    end
+  end
+
+  def sanitize_and_prepare_reminder_config(old_value, new_submitted_value)
+    new_submitted_value ||= {}
+
+    sanitized_value = {}
+    %w[first_duration second_duration third_duration].each do |slot|
+      next unless new_submitted_value.is_a?(ActionController::Parameters) || new_submitted_value.is_a?(Hash)
+
+      val = new_submitted_value[slot]
+      next unless AccountConfigs::REMINDER_DURATIONS.key?(val.to_s)
+
+      sanitized_value[slot] = val.to_s
+    end
+
+    was_enabled = SubmitterReminders::Due.schedule_enabled?(old_value || {})
+    is_enabled = SubmitterReminders::Due.schedule_enabled?(sanitized_value)
+
+    if is_enabled && !was_enabled
+      sanitized_value['enabled_at'] = Time.current.utc.iso8601
+    elsif is_enabled && was_enabled
+      old_enabled_at = (old_value || {})['enabled_at']
+      sanitized_value['enabled_at'] = old_enabled_at.presence || Time.current.utc.iso8601
+    end
+
+    sanitized_value
   end
 
   def load_bcc_config

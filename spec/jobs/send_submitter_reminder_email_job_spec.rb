@@ -23,7 +23,10 @@ RSpec.describe SendSubmitterReminderEmailJob, type: :job do
     AccountConfig.create!(
       account: account,
       key: AccountConfig::SUBMITTER_REMINDERS,
-      value: { 'first_duration' => 'two_days' }
+      value: {
+        'first_duration' => 'two_days',
+        'enabled_at' => 10.days.ago.utc.iso8601
+      }
     )
   end
 
