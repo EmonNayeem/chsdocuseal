@@ -527,7 +527,7 @@ export default {
         try {
           return this.formatDate(
             this.modelValue === '{{date}}' ? new Date() : new Date(this.modelValue),
-            this.field.preferences?.format || (this.locale.endsWith('-US') ? 'MM/DD/YYYY' : 'DD/MM/YYYY'),
+            this.field.preferences?.format || 'DD MMM YY',
             { withTimePlaceholders: this.modelValue === '{{date}}', utc: this.modelValue !== '{{date}}' }
           )
         } catch {

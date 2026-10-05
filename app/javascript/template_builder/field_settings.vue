@@ -596,6 +596,7 @@
 
 <script>
 import { IconRouteAltLeft, IconTypography, IconShape, IconX, IconMathFunction, IconNewSection, IconInfoCircle, IconCopy, IconForms } from '@tabler/icons-vue'
+import { DEFAULT_DATE_FIELD_FORMAT } from '../lib/date_time'
 
 export default {
   name: 'FieldSettings',
@@ -708,6 +709,7 @@ export default {
       const formats = this.dateFormats.length
         ? [...this.dateFormats]
         : [
+            DEFAULT_DATE_FIELD_FORMAT,
             'MM/DD/YYYY',
             'DD/MM/YYYY',
             'YYYY-MM-DD',
@@ -726,6 +728,13 @@ export default {
 
       if (this.field.preferences?.format && !formats.includes(this.field.preferences.format)) {
         formats.unshift(this.field.preferences.format)
+      }
+
+      if (!formats.includes(DEFAULT_DATE_FIELD_FORMAT)) {
+        formats.unshift(DEFAULT_DATE_FIELD_FORMAT)
+      } else {
+        formats.splice(formats.indexOf(DEFAULT_DATE_FIELD_FORMAT), 1)
+        formats.unshift(DEFAULT_DATE_FIELD_FORMAT)
       }
 
       return formats

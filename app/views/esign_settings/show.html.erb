@@ -77,7 +77,7 @@
                 <%= item['name'] %>
               </td>
               <td>
-                <%= l(item['pkcs'].certificate.not_after.to_date, format: :long, locale: current_account.locale) %>
+                <%= l(item['pkcs'].certificate.not_after.to_date, format: :short, locale: current_account.locale) %>
               </td>
               <td>
                 <% if item['status'] == 'default' %>

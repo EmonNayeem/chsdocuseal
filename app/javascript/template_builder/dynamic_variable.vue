@@ -241,6 +241,7 @@
 <script>
 import FieldType from './field_type'
 import { IconSettings } from '@tabler/icons-vue'
+import { DEFAULT_DATE_FIELD_FORMAT } from '../lib/date_time'
 
 export default {
   name: 'DynamicVariable',
@@ -325,6 +326,7 @@ export default {
       const formats = this.dateFormats.length
         ? [...this.dateFormats]
         : [
+            DEFAULT_DATE_FIELD_FORMAT,
             'MM/DD/YYYY',
             'DD/MM/YYYY',
             'YYYY-MM-DD',
@@ -343,6 +345,13 @@ export default {
 
       if (this.schema.format && !formats.includes(this.schema.format)) {
         formats.unshift(this.schema.format)
+      }
+
+      if (!formats.includes(DEFAULT_DATE_FIELD_FORMAT)) {
+        formats.unshift(DEFAULT_DATE_FIELD_FORMAT)
+      } else {
+        formats.splice(formats.indexOf(DEFAULT_DATE_FIELD_FORMAT), 1)
+        formats.unshift(DEFAULT_DATE_FIELD_FORMAT)
       }
 
       return formats

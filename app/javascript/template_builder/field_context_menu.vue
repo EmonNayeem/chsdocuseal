@@ -485,6 +485,7 @@
 
 <script>
 import { IconCopy, IconTrashX, IconTypography, IconInfoCircle, IconRouteAltLeft, IconMathFunction, IconAdjustmentsHorizontal, IconInputCheck, IconDots, IconNewSection, IconForms, IconId, IconCash, IconCoins } from '@tabler/icons-vue'
+import { DEFAULT_DATE_FIELD_FORMAT } from '../lib/date_time'
 import FormulaModal from './formula_modal'
 import FontModal from './font_modal'
 import ConditionsModal from './conditions_modal'
@@ -671,7 +672,7 @@ export default {
       return ['any', ...FieldSettings.computed.signatureFormats.call(this)]
     },
     currentDateFormat () {
-      return this.field.preferences?.format || 'MM/DD/YYYY'
+      return this.field.preferences?.format || DEFAULT_DATE_FIELD_FORMAT
     },
     currentNumberFormat () {
       return this.field.preferences?.format || 'none'

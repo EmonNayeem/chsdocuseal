@@ -55,6 +55,7 @@
 
 <script>
 import { IconUser, IconInnerShadowTop } from '@tabler/icons-vue'
+import { formatShortDateTime } from '../lib/date_time'
 
 export default {
   name: 'RevisionsModal',
@@ -92,12 +93,7 @@ export default {
         .finally(() => { this.loadingId = null })
     },
     formatDate (string) {
-      return new Date(string).toLocaleString(this.locale || undefined, {
-        month: 'long',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      })
+      return formatShortDateTime(string, this.locale)
     }
   }
 }

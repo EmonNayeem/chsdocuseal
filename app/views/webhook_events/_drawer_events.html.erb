@@ -22,7 +22,7 @@
             <%= svg_icon(webhook_attempt.success? ? 'check' : 'x', class: 'w-4 h-4 shrink-0') %>
           </span>
           <p class="leading-none text-sm text-base-content/60 pt-1">
-            <%= l(webhook_attempt.created_at.in_time_zone(current_account.timezone), format: :long, locale: current_account.locale) %>
+            <%= l(webhook_attempt.created_at.in_time_zone(current_account.timezone), format: :short, locale: current_account.locale) %>
           </p>
           <div class="mt-2">
             <p class="text-sm font-bold text-base-content/80">
@@ -45,7 +45,7 @@
           <%= svg_icon('clock', class: 'w-4 h-4 shrink-0') %>
         </span>
         <p class="leading-none text-base-content/60 pt-1">
-          <%= l(webhook_event.created_at.in_time_zone(current_account.timezone), format: :long, locale: current_account.locale) %>
+          <%= l(webhook_event.created_at.in_time_zone(current_account.timezone), format: :short, locale: current_account.locale) %>
         </p>
       </li>
     <% end %>

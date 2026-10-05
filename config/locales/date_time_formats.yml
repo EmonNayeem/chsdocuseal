@@ -1,0 +1,29 @@
+en: &date_time_formats
+  date:
+    formats:
+      short: "%d %b %y"
+  time:
+    formats:
+      short: "%d %b %y %I:%M %p"
+
+en-US: *date_time_formats
+en-GB: *date_time_formats
+es-ES: *date_time_formats
+fr-FR: *date_time_formats
+pt-PT: *date_time_formats
+de-DE: *date_time_formats
+it-IT: *date_time_formats
+nl-NL: *date_time_formats
+es: *date_time_formats
+it: *date_time_formats
+de: *date_time_formats
+fr: *date_time_formats
+nl: *date_time_formats
+pl: *date_time_formats
+uk: *date_time_formats
+cs: *date_time_formats
+pt: *date_time_formats
+he: *date_time_formats
+ar: *date_time_formats
+ko: *date_time_formats
+ja: *date_time_formats

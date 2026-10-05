@@ -317,6 +317,7 @@
 
 <script>
 import Contenteditable from './contenteditable'
+import { DEFAULT_DATE_FIELD_FORMAT } from '../lib/date_time'
 import FieldType from './field_type'
 import PaymentSettings from './payment_settings'
 import FieldSettings from './field_settings'
@@ -427,9 +428,7 @@ export default {
     this.field.preferences ||= {}
 
     if (this.field.type === 'date') {
-      this.field.preferences.format ||=
-        this.dateFormats[0] ||
-        ({ 'de-DE': 'DD.MM.YYYY' }[this.locale] || ((Intl.DateTimeFormat().resolvedOptions().locale.endsWith('-US') || new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).format(new Date()).match(/\s(?:CST|CDT|PST|PDT|EST|EDT)$/)) ? 'MM/DD/YYYY' : 'DD/MM/YYYY'))
+      this.field.preferences.format ||= DEFAULT_DATE_FIELD_FORMAT
     }
   },
   methods: {

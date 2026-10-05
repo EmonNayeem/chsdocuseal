@@ -234,7 +234,7 @@
                   <% end %>
                 <% elsif submitter %>
                   <% if submitter.completed_at? %>
-                    <%= l(submitter.completed_at.in_time_zone(@submission.account.timezone), format: :long, locale: @submission.account.locale) %>
+                    <%= l(submitter.completed_at.in_time_zone(@submission.account.timezone), format: :short, locale: @submission.account.locale) %>
                   <% elsif @submission.completed_at? %>
                     <%= t('not_completed') %>
                   <% elsif @submission.expire_at? %>

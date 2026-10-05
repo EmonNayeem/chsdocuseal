@@ -35,7 +35,7 @@
                   <span class="badge badge-ghost badge-sm">Inactive</span>
                 <% end %>
               </td>
-              <td><%= l(company.created_at.to_date, format: :long) %></td>
+              <td><%= l(company.created_at.to_date, format: :short) %></td>
               <td class="text-right">
                 <%= link_to 'Edit Settings', edit_settings_company_path(company), class: 'btn btn-ghost btn-sm' %>
               </td>

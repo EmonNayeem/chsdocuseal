@@ -8,7 +8,7 @@
           <%= svg_icon('file_text', class: 'w-4 h-4') %>
         </span>
         <p class="text-sm leading-none text-base-content/60 pt-1.5">
-          <%= l(@submission.created_at.in_time_zone(current_account.timezone), format: :long, locale: current_account.locale) %>
+          <%= l(@submission.created_at.in_time_zone(current_account.timezone), format: :short, locale: current_account.locale) %>
         </p>
         <p class="text-base-content/80 mt-1">
           <% if @submission.source == 'invite' %>
@@ -33,7 +33,7 @@
           </span>
           <div class="flex items-center space-x-1 pt-1.5">
             <span class="text-sm leading-none text-base-content/60">
-              <%= l(event.event_timestamp.in_time_zone(current_account.timezone), format: :long, locale: current_account.locale) %>
+              <%= l(event.event_timestamp.in_time_zone(current_account.timezone), format: :short, locale: current_account.locale) %>
             </span>
             <% if (device = DetectBrowserDevice.call(event.data['ua'])) %>
               <span class="tooltip tooltip-top" data-tip="<%= t(device) %>">

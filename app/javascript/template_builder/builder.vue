@@ -708,6 +708,7 @@
 <script>
 import Upload from './upload'
 import Dropzone from './dropzone'
+import { formatShortDateTime, DEFAULT_DATE_FIELD_FORMAT } from '../lib/date_time'
 import HoverDropzone from './hover_dropzone'
 import DragPlaceholder from './drag_placeholder'
 import Fields from './fields'
@@ -1181,12 +1182,7 @@ export default {
       return isMobileSafariIos || /android|iphone|ipad/i.test(navigator.userAgent)
     },
     defaultDateFormat () {
-      if (this.dateFormats.length) return this.dateFormats[0]
-
-      const isUsBrowser = Intl.DateTimeFormat().resolvedOptions().locale.endsWith('-US')
-      const isUsTimezone = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).format(new Date()).match(/\s(?:CST|CDT|PST|PDT|EST|EDT)$/)
-
-      return this.localeDateFormats[this.locale] || ((isUsBrowser || isUsTimezone) ? 'MM/DD/YYYY' : 'DD/MM/YYYY')
+      return DEFAULT_DATE_FIELD_FORMAT
     },
     localeDateFormats () {
       return {
@@ -1958,13 +1954,7 @@ export default {
       })
     },
     formatRevisionTime (string) {
-      return new Date(string).toLocaleString(this.locale || undefined, {
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      })
+      return formatShortDateTime(string, this.locale)
     },
     t (key) {
       return this.i18n[key] || i18n[this.language]?.[key] || i18n.en[key] || key
