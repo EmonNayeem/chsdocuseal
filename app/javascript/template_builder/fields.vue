@@ -342,10 +342,11 @@
     </ul>
   </div>
   <div
-    v-if="!isShowVariables && withFieldsDetection && editable && fields.length < 2 && !template.schema.some((item) => item.dynamic)"
+    v-if="!isShowVariables && withFieldsDetection && editable && !template.schema.some((item) => item.dynamic)"
     class="my-2"
   >
     <button
+      v-if="fields.length < 2"
       class="btn w-full"
       :class="{ 'bg-base-300': fieldPagesLoaded !== null }"
       @click="fieldPagesLoaded !== null ? null : detectFields()"
@@ -377,6 +378,37 @@
         </span>
       </template>
     </button>
+    <div v-else class="flex flex-col gap-1.5 mt-4">
+      <button
+        class="btn btn-sm w-full font-normal"
+        :class="{ 'bg-base-300': fieldPagesLoaded !== null }"
+        @click="fieldPagesLoaded !== null ? null : rerunAutodetect()"
+      >
+        <template v-if="fieldPagesLoaded !== null">
+          <IconInnerShadowTop
+            width="16"
+            class="animate-spin"
+          />
+          <span v-if="analyzingProgress">
+            {{ Math.round(analyzingProgress * 100) }}% {{ t('analyzing_') }}
+          </span>
+          <span v-else>
+            {{ fieldPagesLoaded }} / {{ numberOfPages }} {{ t('processing_') }}
+          </span>
+        </template>
+        <template v-else>
+          <IconSparkles width="16" />
+          <span>{{ t('re_run_autodetect') }}</span>
+        </template>
+      </button>
+      <button
+        class="btn btn-sm w-full font-normal text-error hover:bg-error hover:text-white"
+        :disabled="fieldPagesLoaded !== null"
+        @click="promptDeleteAllFields"
+      >
+        <span>{{ t('delete_all_fields') }}</span>
+      </button>
+    </div>
   </div>
   <div
     v-show="!isShowVariables && fields.length < 4 && editable && withHelp && showTourStartForm"
@@ -795,7 +827,119 @@ export default {
         }
       })
     },
-    detectFields () {
+    promptDeleteAllFields () {
+      if (confirm(this.t('delete_all_fields_confirmation'))) {
+        this.performRemoveAllFields({ save: true })
+      }
+    },
+    performRemoveAllFields ({ save = true } = {}) {
+      [...this.fields].forEach((field) => {
+        this.removeField(field, false)
+      })
+      this.selectedAreasRef.value = []
+      if (save) this.save()
+    },
+    rerunAutodetect () {
+      if (confirm(this.t('re_run_autodetect_confirmation'))) {
+        this.detectFields({ fresh: true })
+      }
+    },
+    calculateIoU (area1, area2) {
+      const x1 = Math.max(area1.x, area2.x)
+      const y1 = Math.max(area1.y, area2.y)
+      const x2 = Math.min(area1.x + area1.w, area2.x + area2.w)
+      const y2 = Math.min(area1.y + area1.h, area2.y + area2.h)
+
+      const intersectionArea = Math.max(0, x2 - x1) * Math.max(0, y2 - y1)
+      const area1Size = area1.w * area1.h
+      const area2Size = area2.w * area2.h
+      const unionArea = area1Size + area2Size - intersectionArea
+
+      return unionArea > 0 ? intersectionArea / unionArea : 0
+    },
+    reconcileDetectedFields (detectedFields, detectedSubmitters) {
+      const oldFields = this.fields
+      const unmatchedDetectedAreas = []
+
+      detectedFields.forEach((df) => {
+        (df.areas || []).forEach((da) => {
+          unmatchedDetectedAreas.push({
+            field: df,
+            area: da,
+            consumed: false
+          })
+        })
+      })
+
+      oldFields.forEach((oldField) => {
+        (oldField.areas || []).forEach((oldArea) => {
+          let bestMatch = null
+          let bestIoU = 0
+
+          unmatchedDetectedAreas.forEach((uda) => {
+            if (uda.consumed) return
+            if (uda.area.attachment_uuid !== oldArea.attachment_uuid) return
+            if (uda.area.page !== oldArea.page) return
+
+            const iou = this.calculateIoU(oldArea, uda.area)
+            if (iou >= 0.1 && iou > bestIoU) {
+              bestMatch = uda
+              bestIoU = iou
+            }
+          })
+
+          if (bestMatch) {
+            oldArea.x = bestMatch.area.x
+            oldArea.y = bestMatch.area.y
+            oldArea.w = bestMatch.area.w
+            oldArea.h = bestMatch.area.h
+            bestMatch.consumed = true
+          }
+        })
+      })
+
+      const newFieldsToAdd = []
+      detectedFields.forEach((df) => {
+        const remainingAreas = unmatchedDetectedAreas
+          .filter((uda) => uda.field === df && !uda.consumed)
+          .map((uda) => uda.area)
+
+        if (remainingAreas.length > 0) {
+          const newField = JSON.parse(JSON.stringify(df))
+          newField.areas = remainingAreas
+          newFieldsToAdd.push(newField)
+        }
+      })
+
+      if (newFieldsToAdd.length > 0) {
+        const submittersMap = {}
+        if (detectedSubmitters) {
+          detectedSubmitters.forEach(ds => {
+            const existing = this.template.submitters.find(s => s.name?.toLowerCase() === ds.name?.toLowerCase())
+            if (existing) {
+              submittersMap[ds.uuid] = existing.uuid
+            } else {
+              submittersMap[ds.uuid] = this.selectedSubmitter?.uuid || this.template.submitters[0]?.uuid
+            }
+          })
+        }
+
+        newFieldsToAdd.forEach(f => {
+          if (submittersMap[f.submitter_uuid]) {
+            f.submitter_uuid = submittersMap[f.submitter_uuid]
+          } else if (!f.submitter_uuid) {
+            f.submitter_uuid = this.selectedSubmitter?.uuid || this.template.submitters[0]?.uuid
+          }
+        })
+
+        const enrichedNewFields = newFieldsToAdd.map((f) => this.enrichDetectedField(f))
+        this.template.fields.push(...enrichedNewFields)
+      }
+
+      this.selectedAreasRef.value = []
+      this.save()
+    },
+    detectFields ({ fresh = false } = {}) {
       const fields = []
 
       this.fieldPagesLoaded = 0
@@ -805,7 +949,7 @@ export default {
         headers: {
           'Content-Type': 'application/json'
         },
-        ...(this.withDetectExistingFields
+        ...(this.withDetectExistingFields && !fresh
           ? { body: JSON.stringify({ fields: this.buildExistingFields() }) }
           : {})
       }).then(async (response) => {
@@ -828,28 +972,40 @@ export default {
               const data = JSON.parse(jsonStr)
 
               if (data.error) {
-                if ((data.fields || fields).length) {
-                  this.template.fields = (data.fields || fields).map((f) => this.enrichDetectedField(f))
-
-                  this.save()
+                if (!fresh) {
+                  if ((data.fields || fields).length) {
+                    this.template.fields = (data.fields || fields).map((f) => this.enrichDetectedField(f))
+                    this.save()
+                  } else {
+                    alert(data.error)
+                  }
                 } else {
                   alert(data.error)
                 }
-
                 break
               } else if (data.analyzing) {
                 this.analyzingProgress = data.progress
               } else if (data.completed) {
                 this.fieldPagesLoaded = null
 
-                if (data.submitters) {
-                  this.template.submitters = data.submitters
-                  this.$emit('select-submitter', this.template.submitters[0])
+                const detectedFields = data.fields || fields
+
+                if (fresh) {
+                  if (detectedFields.length === 0) {
+                    alert(this.t('no_fields_detected'))
+                    return
+                  }
+
+                  this.reconcileDetectedFields(detectedFields, data.submitters)
+                } else {
+                  if (data.submitters) {
+                    this.template.submitters = data.submitters
+                    this.$emit('select-submitter', this.template.submitters[0])
+                  }
+
+                  this.template.fields = detectedFields.map((f) => this.enrichDetectedField(f))
+                  this.save()
                 }
-
-                this.template.fields = (data.fields || fields).map((f) => this.enrichDetectedField(f))
-
-                this.save()
 
                 break
               } else if (data.fields) {
