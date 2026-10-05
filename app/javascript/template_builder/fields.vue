@@ -614,6 +614,37 @@ export default {
       }
     }
   },
+  watch: {
+    'selectedAreasRef.value': {
+      handler (areas) {
+        if (!areas || areas.length !== 1) return
+
+        const area = areas[0]
+        const field = this.fields.find(f => f.areas?.includes(area))
+
+        if (!field) return
+
+        if (this.selectedSubmitter.uuid !== field.submitter_uuid) {
+          const submitter = this.submitters.find(s => s.uuid === field.submitter_uuid)
+          if (submitter) {
+            this.$emit('select-submitter', submitter)
+          }
+        }
+
+        if (this.isShowVariables) {
+          this.isShowVariables = false
+        }
+
+        this.$nextTick(() => {
+          const el = this.$refs.fields?.querySelector(`[data-uuid="${field.uuid}"]`)
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }
+        })
+      },
+      deep: true
+    }
+  },
   mounted () {
     try {
       this.showCustomTab = localStorage.getItem('docuseal_builder_tab') === 'custom'

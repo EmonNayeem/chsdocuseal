@@ -4,8 +4,11 @@
     :class="`list-field-${field.type}`"
   >
     <div
-      class="border border-base-300 rounded relative group fields-list-item"
+      class="border rounded relative group fields-list-item transition-shadow duration-200"
+      :class="isSelected ? 'border-primary ring-1 ring-primary' : 'border-base-300'"
       :style="{ backgroundColor: backgroundColor }"
+      :data-selected="isSelected ? 'true' : undefined"
+      :data-uuid="field.uuid"
     >
       <div class="flex items-center justify-between relative group/contenteditable-container">
         <div
@@ -422,6 +425,11 @@ export default {
     },
     areas () {
       return this.field.areas || []
+    },
+    isSelected () {
+      return this.areas.some(
+        (area) => this.selectedAreasRef.value.includes(area)
+      )
     }
   },
   created () {
