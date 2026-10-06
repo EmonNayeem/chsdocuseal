@@ -117,6 +117,20 @@
           <span>{{ t('height') }}</span>
         </button>
       </ContextSubmenu>
+      <hr
+        v-if="canGroupCheckboxes"
+        class="my-1 border-neutral-200"
+      >
+      <button
+        v-if="canGroupCheckboxes"
+        class="w-full px-2 py-1 rounded-md hover:bg-neutral-100 flex items-center justify-between text-sm"
+        @click.stop="handleGroupCheckboxes"
+      >
+        <span class="flex items-center space-x-2">
+          <IconListCheck class="w-4 h-4" />
+          <span>{{ t('group_checkboxes') }}</span>
+        </span>
+      </button>
       <hr class="my-1 border-neutral-200">
       <button
         class="w-full px-2 py-1 rounded-md hover:bg-neutral-100 flex items-center justify-between text-sm"
@@ -168,7 +182,8 @@
 </template>
 
 <script>
-import { IconCopy, IconTrashX, IconTypography, IconRouteAltLeft, IconLayoutAlignLeft, IconLayoutAlignRight, IconLayoutAlignTop, IconLayoutAlignBottom, IconLayoutAlignMiddle, IconAspectRatio, IconArrowsHorizontal, IconArrowsVertical } from '@tabler/icons-vue'
+import { v4 } from 'uuid'
+import { IconListCheck, IconCopy, IconTrashX, IconTypography, IconRouteAltLeft, IconLayoutAlignLeft, IconLayoutAlignRight, IconLayoutAlignTop, IconLayoutAlignBottom, IconLayoutAlignMiddle, IconAspectRatio, IconArrowsHorizontal, IconArrowsVertical } from '@tabler/icons-vue'
 import FontModal from './font_modal'
 import ConditionsModal from './conditions_modal'
 import ContextSubmenu from './field_context_submenu'
@@ -178,6 +193,7 @@ import FieldType from './field_type'
 export default {
   name: 'SelectionContextMenu',
   components: {
+    IconListCheck,
     IconCopy,
     IconTrashX,
     IconTypography,
@@ -227,6 +243,25 @@ export default {
       return this.selectedAreasRef.value.map((area) => {
         return this.template.fields.find((f) => f.areas?.includes(area))
       }).filter(Boolean)
+    },
+    uniqueSelectedFields () {
+      const uniqueFields = []
+      const uuids = new Set()
+      this.selectedFields.forEach(f => {
+        if (!uuids.has(f.uuid)) {
+          uuids.add(f.uuid)
+          uniqueFields.push(f)
+        }
+      })
+      return uniqueFields
+    },
+    canGroupCheckboxes () {
+      if (this.uniqueSelectedFields.length < 2) return false
+      if (this.uniqueSelectedFields.some(f => f.type !== 'checkbox')) return false
+      if (this.uniqueSelectedFields.some(f => !f.areas || f.areas.length !== 1)) return false
+      const submitterUuid = this.uniqueSelectedFields[0].submitter_uuid
+      if (this.uniqueSelectedFields.some(f => f.submitter_uuid !== submitterUuid)) return false
+      return true
     },
     requiredFields () {
       return this.selectedFields.filter((f) => !['phone', 'stamp', 'verification', 'strikethrough', 'heading'].includes(f.type))
@@ -406,6 +441,102 @@ export default {
       this.save()
 
       this.closeModal()
+    },
+    handleGroupCheckboxes () {
+      if (!this.canGroupCheckboxes) return
+
+      const fieldUuids = this.uniqueSelectedFields.map(f => f.uuid)
+
+      let hasCondition = false
+      if (this.uniqueSelectedFields.some(f => f.conditions && f.conditions.length > 0)) {
+        hasCondition = true
+      }
+
+      if (!hasCondition) {
+        hasCondition = this.template.fields.some(f =>
+          f.conditions && f.conditions.some(c => fieldUuids.includes(c.field_uuid))
+        )
+      }
+
+      if (!hasCondition && this.template.schema) {
+        hasCondition = this.template.schema.some(item =>
+          item.conditions && item.conditions.some(c => fieldUuids.includes(c.field_uuid))
+        )
+      }
+
+      if (!hasCondition) {
+        hasCondition = this.template.fields.some(f => {
+          const formula = f.preferences?.formula
+          if (!formula) return false
+
+          return [...formula.matchAll(/{{(.*?)}}/g)]
+            .some(([, uuid]) => fieldUuids.includes(uuid))
+        })
+      }
+
+      if (hasCondition) {
+        alert(this.t('checkbox_group_conditions_warning'))
+        return
+      }
+
+      const commonSubmitterUuid = this.uniqueSelectedFields[0].submitter_uuid
+
+      const attachmentOrder = (this.template.schema || []).reduce((acc, item, index) => {
+        acc[item.attachment_uuid] = index
+        return acc
+      }, {})
+
+      const sortedFields = [...this.uniqueSelectedFields].sort((fA, fB) => {
+        const a = fA.areas[0] || {}
+        const b = fB.areas[0] || {}
+
+        const idxA = attachmentOrder[a.attachment_uuid] ?? Number.MAX_SAFE_INTEGER
+        const idxB = attachmentOrder[b.attachment_uuid] ?? Number.MAX_SAFE_INTEGER
+
+        if (idxA !== idxB) return idxA - idxB
+        if (a.page !== b.page) return (a.page || 0) - (b.page || 0)
+        if (Math.abs((a.y || 0) - (b.y || 0)) > 0.01) return (a.y || 0) - (b.y || 0)
+        return (a.x || 0) - (b.x || 0)
+      })
+
+      const newField = {
+        uuid: v4(),
+        type: 'multiple',
+        name: '',
+        submitter_uuid: commonSubmitterUuid,
+        required: false,
+        options: [],
+        areas: []
+      }
+
+      sortedFields.forEach(f => {
+        const option = {
+          uuid: v4(),
+          value: f.name && f.name !== this.buildDefaultName(f) ? f.name : ''
+        }
+        newField.options.push(option)
+
+        f.areas.forEach(a => {
+          const newArea = { ...a, option_uuid: option.uuid }
+          newField.areas.push(newArea)
+        })
+      })
+
+      const originalIndices = sortedFields.map(f => this.template.fields.indexOf(f)).filter(i => i > -1)
+      const insertIndex = originalIndices.length > 0 ? Math.min(...originalIndices) : this.template.fields.length
+
+      sortedFields.forEach(f => {
+        const index = this.template.fields.indexOf(f)
+        if (index > -1) {
+          this.template.fields.splice(index, 1)
+        }
+      })
+
+      this.template.fields.splice(insertIndex, 0, newField)
+
+      this.selectedAreasRef.value = newField.areas
+      this.save()
+      this.$emit('close')
     }
   }
 }
