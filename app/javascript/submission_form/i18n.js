@@ -1,4 +1,12 @@
 const en = {
+  select_or_type_your_option: 'Select or type your option...',
+  select_your_options: 'Select your options',
+  add_custom_value: 'Add',
+  custom: 'Custom',
+  no_results_found: 'No results found',
+  or_enter_custom_value: 'Or enter a custom value',
+  add_value: 'Add value',
+  remove_value: 'Remove value',
   step: 'Step',
   form_progress: 'Form progress',
   close: 'Close',

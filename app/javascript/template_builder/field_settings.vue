@@ -432,6 +432,38 @@
     </label>
   </li>
   <li
+    v-if="field.type === 'select'"
+    class="field-settings-allow-custom-value"
+    @click.stop
+  >
+    <label class="cursor-pointer py-1.5">
+      <input
+        :checked="field.preferences?.allow_custom_value"
+        type="checkbox"
+        :disabled="!editable"
+        class="toggle toggle-xs"
+        @change="[field.preferences ||= {}, field.preferences.allow_custom_value = $event.target.checked, $emit('save')]"
+      >
+      <span class="label-text">{{ t('allow_custom_value') }}</span>
+    </label>
+  </li>
+  <li
+    v-if="field.type === 'select'"
+    class="field-settings-allow-multiple-values"
+    @click.stop
+  >
+    <label class="cursor-pointer py-1.5">
+      <input
+        :checked="field.preferences?.allow_multiple_values"
+        type="checkbox"
+        :disabled="!editable"
+        class="toggle toggle-xs"
+        @change="[field.preferences ||= {}, field.preferences.allow_multiple_values = $event.target.checked, $emit('save')]"
+      >
+      <span class="label-text">{{ t('allow_multiple_values') }}</span>
+    </label>
+  </li>
+  <li
     v-if="withPrefillable && prefillableFieldTypes.includes(field['type'])"
     class="field-settings-prefillable"
     @click.stop

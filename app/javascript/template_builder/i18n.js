@@ -1,4 +1,6 @@
 const en = {
+  allow_custom_value: 'Allow custom value',
+  allow_multiple_values: 'Allow multiple values',
   fixed: 'Fixed',
   default: 'Default',
   save_as_custom_field: 'Save as custom field',

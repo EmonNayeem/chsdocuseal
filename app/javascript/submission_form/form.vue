@@ -252,70 +252,14 @@
             @submit="!isSubmitting && submitStep()"
             @focus="scrollIntoField(currentField)"
           />
-          <div v-else-if="currentField.type === 'select'">
-            <label
-              v-if="showFieldNames && (currentField.name || currentField.title)"
-              :for="currentField.uuid"
-              dir="auto"
-              class="label text-xl sm:text-2xl py-0 mb-2 sm:mb-3.5 field-name-label"
-              :class="{ 'mb-2': !currentField.description }"
-            >
-              <MarkdownContent
-                v-if="currentField.title"
-                :string="currentField.title"
-              />
-              <template v-else>
-                {{ currentField.name }}
-              </template>
-              <template v-if="!currentField.required">
-                <span :class="{ 'hidden sm:inline': (currentField.title || currentField.name).length > 20 }">
-                  ({{ t('optional') }})
-                </span>
-              </template>
-            </label>
-            <div
-              v-else
-              class="py-1"
-            />
-            <div
-              v-if="currentField.description"
-              :id="currentField.uuid + '-desc'"
-              dir="auto"
-              class="mb-3 px-1 field-description-text"
-            >
-              <MarkdownContent :string="currentField.description" />
-            </div>
-            <AppearsOn :field="currentField" />
-            <select
-              :id="currentField.uuid"
-              dir="auto"
-              :required="currentField.required"
-              :aria-label="showFieldNames && (currentField.name || currentField.title) ? undefined : (currentField.name || currentField.title || t('select_your_option'))"
-              :aria-describedby="currentField.description ? currentField.uuid + '-desc' : undefined"
-              class="select base-input !text-2xl w-full text-center font-normal"
-              :class="{ 'text-gray-300': !values[currentField.uuid] }"
-              :name="`values[${currentField.uuid}]`"
-              @change="values[currentField.uuid] = $event.target.value"
-              @focus="scrollIntoField(currentField)"
-            >
-              <option
-                value=""
-                :selected="!values[currentField.uuid]"
-                class="text-gray-300"
-              >
-                {{ t('select_your_option') }}
-              </option>
-              <option
-                v-for="option in currentField.options"
-                :key="option.uuid"
-                :selected="values[currentField.uuid] == option.value"
-                :value="option.value"
-                class="text-base-content"
-              >
-                {{ option.value }}
-              </option>
-            </select>
-          </div>
+          <SelectStep
+            v-else-if="currentField.type === 'select'"
+            :key="currentField.uuid"
+            v-model="values[currentField.uuid]"
+            :show-field-names="showFieldNames"
+            :field="currentField"
+            @focus="scrollIntoField(currentField)"
+          />
           <div v-else-if="currentField.type === 'radio'">
             <label
               v-if="showFieldNames && (currentField.name || currentField.title)"
@@ -689,6 +633,7 @@ import SignatureStep from './signature_step'
 import InitialsStep from './initials_step'
 import AttachmentStep from './attachment_step'
 import MultiSelectStep from './multi_select_step'
+import SelectStep from './select_step'
 import PhoneStep from './phone_step'
 import PaymentStep from './payment_step'
 import VerificationStep from './verification_step'
@@ -753,6 +698,7 @@ export default {
     KbaStep,
     InviteForm,
     MultiSelectStep,
+    SelectStep,
     IconInnerShadowTop,
     DateStep,
     IconArrowsDiagonal,
@@ -1183,6 +1129,7 @@ export default {
       if (this.recalculateButtonDisabledKey) {
         return this.isSubmitting ||
         (this.currentField.required && ['image', 'file', 'multiple'].includes(this.currentField.type) && !this.values[this.currentField.uuid]?.length) ||
+        (this.currentField.required && this.currentField.type === 'select' && isEmpty(this.values[this.currentField.uuid])) ||
         (this.currentField.required && this.currentField.type === 'signature' && !this.values[this.currentField.uuid]?.length && this.$refs.currentStep && !this.$refs.currentStep.isSignatureStarted) ||
         (this.currentField.required && this.currentField.type === 'initials' && !this.values[this.currentField.uuid]?.length && this.$refs.currentStep && !this.$refs.currentStep.isInitialsStarted)
       } else {
