@@ -328,7 +328,10 @@ export default {
       isMoved: false,
       isHeadingSelected: false,
       textOverflowChars: 0,
-      dragFrom: { x: 0, y: 0 }
+      dragFrom: { x: 0, y: 0 },
+      dragStartPointer: null,
+      dragStartArea: null,
+      shiftConstraintAxis: null
     }
   },
   computed: {
@@ -811,6 +814,10 @@ export default {
 
       this.selectedAreasRef.value = [this.area]
 
+      this.dragStartPointer = { clientX: e.clientX, clientY: e.clientY }
+      this.dragStartArea = { x: this.area.x, y: this.area.y }
+      this.shiftConstraintAxis = null
+
       this.dragFrom = { x: rect.left - e.clientX, y: rect.top - e.clientY }
 
       this.$el.getRootNode().addEventListener('mousemove', this.mouseMove)
@@ -828,8 +835,28 @@ export default {
       const page = this.$parent.$refs.mask.previousSibling
       const rect = page.getBoundingClientRect()
 
-      this.area.x = Math.min(Math.max((this.dragFrom.x + e.clientX - rect.left) / rect.width, 0), 1 - this.area.w)
-      this.area.y = (this.dragFrom.y + e.clientY - rect.top) / rect.height
+      let newX = Math.min(Math.max((this.dragFrom.x + e.clientX - rect.left) / rect.width, 0), 1 - this.area.w)
+      let newY = (this.dragFrom.y + e.clientY - rect.top) / rect.height
+
+      if (e.shiftKey && this.dragStartPointer) {
+        if (!this.shiftConstraintAxis) {
+          const dx = Math.abs(e.clientX - this.dragStartPointer.clientX)
+          const dy = Math.abs(e.clientY - this.dragStartPointer.clientY)
+
+          if (dx > 3 || dy > 3) {
+            this.shiftConstraintAxis = dx > dy ? 'x' : 'y'
+          }
+        }
+
+        if (this.shiftConstraintAxis === 'x') {
+          newY = this.dragStartArea.y
+        } else if (this.shiftConstraintAxis === 'y') {
+          newX = this.dragStartArea.x
+        }
+      }
+
+      this.area.x = newX
+      this.area.y = newY
 
       if ((this.area.page === 0 && this.area.y < 0) || (this.area.page === this.maxPage && this.area.y > 1 - this.area.h)) {
         this.area.y = Math.min(Math.max(this.area.y, 0), 1 - this.area.h)
@@ -855,6 +882,7 @@ export default {
 
       this.isDragged = false
       this.isMoved = false
+      this.shiftConstraintAxis = null
 
       this.$emit('stop-drag')
     },

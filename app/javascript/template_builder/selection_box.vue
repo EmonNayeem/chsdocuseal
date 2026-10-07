@@ -42,7 +42,9 @@ export default {
   data () {
     return {
       isDragging: false,
-      dragStart: { x: 0, y: 0 }
+      dragStart: { x: 0, y: 0 },
+      dragStartPointer: null,
+      shiftConstraintAxis: null
     }
   },
   computed: {
@@ -69,6 +71,8 @@ export default {
     startDrag (e) {
       this.isDragging = true
       this.dragStart = { x: e.clientX, y: e.clientY }
+      this.dragStartPointer = { clientX: e.clientX, clientY: e.clientY }
+      this.shiftConstraintAxis = null
 
       document.addEventListener('pointermove', this.onDrag)
       document.addEventListener('pointerup', this.stopDrag)
@@ -80,15 +84,37 @@ export default {
 
       const rect = parent.getBoundingClientRect()
 
-      const dx = (e.clientX - this.dragStart.x) / rect.width
-      const dy = (e.clientY - this.dragStart.y) / rect.height
+      let targetClientX = e.clientX
+      let targetClientY = e.clientY
 
-      this.$emit('move', dx, dy)
+      if (e.shiftKey && this.dragStartPointer) {
+        if (!this.shiftConstraintAxis) {
+          const totalDx = Math.abs(e.clientX - this.dragStartPointer.clientX)
+          const totalDy = Math.abs(e.clientY - this.dragStartPointer.clientY)
 
-      this.dragStart = { x: e.clientX, y: e.clientY }
+          if (totalDx > 3 || totalDy > 3) {
+            this.shiftConstraintAxis = totalDx > totalDy ? 'x' : 'y'
+          }
+        }
+
+        if (this.shiftConstraintAxis === 'x') {
+          targetClientY = this.dragStartPointer.clientY
+        } else if (this.shiftConstraintAxis === 'y') {
+          targetClientX = this.dragStartPointer.clientX
+        }
+      }
+
+      const dx = (targetClientX - this.dragStart.x) / rect.width
+      const dy = (targetClientY - this.dragStart.y) / rect.height
+
+      if (dx !== 0 || dy !== 0) {
+        this.$emit('move', dx, dy)
+        this.dragStart = { x: targetClientX, y: targetClientY }
+      }
     },
     stopDrag () {
       this.isDragging = false
+      this.shiftConstraintAxis = null
 
       document.removeEventListener('pointermove', this.onDrag)
       document.removeEventListener('pointerup', this.stopDrag)
