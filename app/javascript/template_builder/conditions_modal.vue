@@ -83,7 +83,7 @@
                   class="text-base-content"
                   :selected="condition.field_uuid === f.uuid"
                 >
-                  {{ f.name || buildDefaultName(f) }}
+                  {{ fieldLabel(f) }}
                 </option>
               </select>
               <select
@@ -100,35 +100,72 @@
                   {{ t(action) }}
                 </option>
               </select>
-              <select
-                v-if="['radio', 'select', 'multiple'].includes(conditionField(condition)?.type) && conditionField(condition)?.options"
-                class="select select-bordered select-sm w-full bg-white h-11 pl-4 text-base font-normal"
-                :class="{ 'text-gray-300': !condition.value }"
-                required
-                @change="condition.value = $event.target.value"
-              >
-                <option
-                  value=""
-                  disabled
-                  selected
+
+              <div
+                v-if="['checked', 'unchecked', 'empty', 'not_empty'].includes(condition.action)"
+                class="hidden"
+              />
+              <template v-else-if="['radio', 'select', 'multiple'].includes(conditionField(condition)?.type)">
+                <div
+                  v-if="conditionField(condition)?.preferences?.allow_custom_value"
+                  class="w-full"
                 >
-                  {{ t('select_value_') }}
-                </option>
-                <option
-                  v-for="(option, index) in conditionField(condition).options"
-                  :key="option.uuid"
-                  :value="option.uuid"
-                  :selected="condition.value === option.uuid"
-                  class="text-base-content"
+                  <input
+                    v-model="condition.value"
+                    type="text"
+                    :list="'options-' + condition.field_uuid + '-' + cindex"
+                    class="input input-bordered input-sm w-full bg-white h-11 pl-4 text-base font-normal"
+                    :class="{ 'text-gray-300': !condition.value }"
+                    :placeholder="t('select_value_')"
+                    required
+                  >
+                  <datalist :id="'options-' + condition.field_uuid + '-' + cindex">
+                    <option
+                      v-for="(option, index) in conditionField(condition).options"
+                      :key="option.uuid"
+                      :value="option.value || `${t('option')} ${index + 1}`"
+                    />
+                  </datalist>
+                </div>
+                <select
+                  v-else
+                  v-model="condition.value"
+                  class="select select-bordered select-sm w-full bg-white h-11 pl-4 text-base font-normal"
+                  :class="{ 'text-gray-300': !condition.value }"
+                  required
                 >
-                  {{ option.value || `${t('option')} ${index + 1}` }}
-                </option>
-              </select>
+                  <option
+                    value=""
+                    disabled
+                    :selected="!condition.value"
+                  >
+                    {{ t('select_value_') }}
+                  </option>
+                  <option
+                    v-for="(option, index) in conditionField(condition).options"
+                    :key="option.uuid"
+                    :value="option.uuid"
+                    :selected="condition.value === option.uuid"
+                    class="text-base-content"
+                  >
+                    {{ option.value || `${t('option')} ${index + 1}` }}
+                  </option>
+                </select>
+              </template>
               <input
-                v-else-if="conditionField(condition)?.type === 'number' && ['equal', 'not_equal', 'greater_than', 'less_than'].includes(condition.action)"
+                v-else-if="conditionField(condition)?.type === 'number'"
                 v-model="condition.value"
                 type="number"
                 step="any"
+                class="input input-bordered input-sm w-full bg-white h-11 pl-4 text-base font-normal"
+                :class="{ 'text-gray-300': !condition.value }"
+                :placeholder="t('type_value')"
+                required
+              >
+              <input
+                v-else
+                v-model="condition.value"
+                type="text"
                 class="input input-bordered input-sm w-full bg-white h-11 pl-4 text-base font-normal"
                 :class="{ 'text-gray-300': !condition.value }"
                 :placeholder="t('type_value')"
@@ -198,8 +235,10 @@ export default {
     fields () {
       if (this.item.submitter_uuid) {
         return this.template.fields.reduce((acc, f) => {
-          if (f !== this.item && !this.excludeTypes.includes(f.type) && !this.excludeFieldUuids.includes(f.uuid) && (!f.conditions?.length || !f.conditions.find((c) => c.field_uuid === this.item.uuid))) {
-            acc.push(f)
+          if (f !== this.item && !this.excludeTypes.includes(f.type) && !this.excludeFieldUuids.includes(f.uuid)) {
+            if (!this.hasCycle(f, this.item.uuid)) {
+              acc.push(f)
+            }
           }
 
           return acc
@@ -211,8 +250,48 @@ export default {
   },
   created () {
     this.item.conditions ||= []
+    this.conditions.forEach(c => {
+      const field = this.conditionField(c)
+      if (field && field.options && field.preferences?.allow_custom_value) {
+        const matchedOption = field.options.find(o => o.uuid === c.value)
+        if (matchedOption) {
+          c.value = matchedOption.value || `${this.t('option')} ${field.options.indexOf(matchedOption) + 1}`
+        }
+      }
+    })
   },
   methods: {
+    hasCycle (candidateField, targetUuid) {
+      const visited = new Set()
+      const queue = [candidateField]
+
+      while (queue.length > 0) {
+        const current = queue.shift()
+        if (!current || !current.conditions) continue
+
+        for (const condition of current.conditions) {
+          if (!condition.field_uuid) continue
+          if (condition.field_uuid === targetUuid) return true
+
+          if (!visited.has(condition.field_uuid)) {
+            visited.add(condition.field_uuid)
+            const nextField = this.template.fields.find(f => f.uuid === condition.field_uuid)
+            if (nextField) queue.push(nextField)
+          }
+        }
+      }
+      return false
+    },
+    fieldLabel (f) {
+      const name = f.name || this.buildDefaultName(f)
+      if (this.template.submitters && this.template.submitters.length > 1) {
+        const submitter = this.template.submitters.find(s => s.uuid === f.submitter_uuid)
+        if (submitter && submitter.name) {
+          return `${submitter.name} — ${name}`
+        }
+      }
+      return name
+    },
     conditionField (condition) {
       return this.fields.find((f) => f.uuid === condition.field_uuid)
     },
@@ -228,22 +307,38 @@ export default {
 
       if (field.type === 'checkbox') {
         actions.push('checked', 'unchecked')
-      } else if (['radio', 'select'].includes(field.type)) {
+      } else if (field.type === 'radio') {
         actions.push('equal', 'not_equal')
-      } else if (['multiple'].includes(field.type)) {
-        actions.push('contains', 'does_not_contain')
+      } else if (field.type === 'multiple') {
+        actions.push('contains', 'does_not_contain', 'empty', 'not_empty')
+      } else if (field.type === 'select') {
+        if (field.preferences?.allow_multiple_values) {
+          actions.push('contains', 'does_not_contain', 'empty', 'not_empty')
+        } else {
+          actions.push('equal', 'not_equal', 'empty', 'not_empty')
+        }
       } else if (field.type === 'number') {
-        actions.push('not_empty', 'empty', 'equal', 'not_equal', 'greater_than', 'less_than')
+        actions.push('empty', 'not_empty', 'equal', 'not_equal', 'greater_than', 'greater_than_or_equal', 'less_than', 'less_than_or_equal')
+      } else if (['text', 'cells', 'phone'].includes(field.type)) {
+        actions.push('empty', 'not_empty', 'equal', 'not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with')
+      } else if (field.type === 'date') {
+        actions.push('empty', 'not_empty', 'equal', 'not_equal')
       } else {
-        actions.push('not_empty', 'empty')
+        actions.push('empty', 'not_empty')
       }
 
       return actions
     },
     validateSaveAndClose () {
-      if (!this.withConditions) {
-        return alert(this.t('available_only_in_pro'))
-      }
+      this.conditions.forEach(c => {
+        const field = this.conditionField(c)
+        if (field && field.options && field.preferences?.allow_custom_value) {
+          const matchedOption = field.options.find((o, i) => (o.value || `${this.t('option')} ${i + 1}`) === c.value)
+          if (matchedOption) {
+            c.value = matchedOption.uuid
+          }
+        }
+      })
 
       if (this.conditions.find((f) => f.field_uuid)) {
         this.item.conditions = this.conditions

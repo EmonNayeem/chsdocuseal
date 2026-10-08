@@ -351,21 +351,41 @@ module Submitters
       end
     end
 
-    def check_field_conditions(submitter_values, field, fields_uuid_index)
+    def check_field_conditions(submitter_values, field, fields_uuid_index, visited = Set.new)
       return true if field['conditions'].blank?
 
-      field['conditions'].each_with_object([]) do |c, acc|
-        if c['operation'] == 'or'
-          acc.push(acc.pop || check_field_condition(c, submitter_values, fields_uuid_index))
+      return false if visited.include?(field['uuid'])
+
+      visited.add(field['uuid'])
+
+      result = field['conditions'].each_with_object([]) do |c, acc|
+        source_field = fields_uuid_index[c['field_uuid']]
+
+        is_satisfied = true
+        if !source_field
+          is_satisfied = false
+        elsif !check_field_conditions(submitter_values, source_field, fields_uuid_index, visited.dup)
+          is_multiple = source_field['type'] == 'multiple' || source_field.dig('preferences', 'allow_multiple_values')
+          empty_value = is_multiple ? [] : nil
+          is_satisfied = check_field_condition(c, empty_value, fields_uuid_index)
         else
-          acc.push(check_field_condition(c, submitter_values, fields_uuid_index))
+          is_satisfied = check_field_condition(c, submitter_values[c['field_uuid']], fields_uuid_index)
+        end
+
+        if c['operation'] == 'or'
+          acc.push(acc.pop || is_satisfied)
+        else
+          acc.push(is_satisfied)
         end
       end.exclude?(false)
+
+      visited.delete(field['uuid'])
+
+      result
     end
 
     # rubocop:disable Metrics
-    def check_field_condition(condition, submitter_values, fields_uuid_index)
-      value = submitter_values[condition['field_uuid']]
+    def check_field_condition(condition, value, fields_uuid_index)
       field = fields_uuid_index[condition['field_uuid']]
 
       case condition['action']
@@ -373,45 +393,54 @@ module Submitters
         value.blank?
       when 'not_empty', 'checked'
         value.present?
-      when ->(action) { action == 'equal' && field&.dig('type') == 'number' }
+      when lambda do |action|
+             action.in?(%w[equal not_equal greater_than greater_than_or_equal less_than less_than_or_equal]) &&
+               field&.dig('type') == 'number'
+           end
         return false if value.blank? || condition['value'].blank?
 
-        (value.to_f - condition['value'].to_f).abs < Float::EPSILON
-      when ->(action) { action == 'not_equal' && field&.dig('type') == 'number' }
-        return false if value.blank? || condition['value'].blank?
+        actual = value.to_f
+        expected = condition['value'].to_f
 
-        (value.to_f - condition['value'].to_f).abs > Float::EPSILON
-      when 'greater_than'
-        return false if field.nil? || value.blank? || condition['value'].blank?
-
-        value.to_f > condition['value'].to_f
-      when 'less_than'
-        return false if field.nil? || value.blank? || condition['value'].blank?
-
-        value.to_f < condition['value'].to_f
-      when 'equal', 'contains'
+        case condition['action']
+        when 'equal' then (actual - expected).abs < Float::EPSILON
+        when 'not_equal' then (actual - expected).abs > Float::EPSILON
+        when 'greater_than' then actual > expected
+        when 'greater_than_or_equal' then actual >= expected
+        when 'less_than' then actual < expected
+        when 'less_than_or_equal' then actual <= expected
+        else false
+        end
+      when 'equal', 'not_equal', 'contains', 'does_not_contain', 'starts_with', 'ends_with'
         return true unless field
 
-        values = Array.wrap(value)
+        expected_str = condition['value'].to_s.strip.downcase
 
-        return values.include?(condition['value']) unless field['options']
+        if field['options']
+          option_index = field['options'].index { |o| o['uuid'] == condition['value'] }
+          if option_index
+            option = field['options'][option_index]
+            fallback = "#{I18n.t('option', locale: :en)} #{option_index + 1}"
+            expected_str = (option['value'].presence || fallback).to_s.strip.downcase
+          end
+        end
 
-        option = field['options'].find { |o| o['uuid'] == condition['value'] }
+        if field['type'] == 'date' && %w[equal not_equal].include?(condition['action'])
+          actual_str = value.to_s.strip.downcase
+          return condition['action'] == 'equal' ? actual_str == expected_str : actual_str != expected_str
+        end
 
-        return false unless option
+        values = Array.wrap(value).map { |v| v.to_s.strip.downcase }
 
-        values.include?(option['value'].presence || "#{I18n.t('option')} #{field['options'].index(option) + 1}")
-      when 'not_equal', 'does_not_contain'
-        return true unless field
-        return false unless field['options']
-
-        option = field['options'].find { |o| o['uuid'] == condition['value'] }
-
-        return false unless option
-
-        values = Array.wrap(value)
-
-        values.exclude?(option['value'].presence || "#{I18n.t('option')} #{field['options'].index(option) + 1}")
+        case condition['action']
+        when 'equal' then values.any?(expected_str)
+        when 'not_equal' then values.none?(expected_str)
+        when 'contains' then values.any? { |v| v.include?(expected_str) }
+        when 'does_not_contain' then values.all? { |v| v.exclude?(expected_str) }
+        when 'starts_with' then values.any? { |v| v.start_with?(expected_str) }
+        when 'ends_with' then values.any? { |v| v.end_with?(expected_str) }
+        else false
+        end
       else
         true
       end

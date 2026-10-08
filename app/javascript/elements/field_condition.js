@@ -64,7 +64,7 @@ export default class extends HTMLElement {
     if (action === 'empty' || action === 'unchecked') return this.isEmpty(actual)
     if (action === 'not_empty' || action === 'checked') return !this.isEmpty(actual)
 
-    if (['equal', 'not_equal', 'greater_than', 'less_than'].includes(action) && this.sourceEl?.getAttribute('type') === 'number') {
+    if (['equal', 'not_equal', 'greater_than', 'greater_than_or_equal', 'less_than', 'less_than_or_equal'].includes(action) && this.sourceEl?.getAttribute('type') === 'number') {
       if (this.isEmpty(actual) || this.isEmpty(expected)) return false
 
       const actualNumber = parseFloat(actual)
@@ -75,24 +75,28 @@ export default class extends HTMLElement {
       if (action === 'equal') return Math.abs(actualNumber - expectedNumber) < Number.EPSILON
       if (action === 'not_equal') return Math.abs(actualNumber - expectedNumber) > Number.EPSILON
       if (action === 'greater_than') return actualNumber > expectedNumber
+      if (action === 'greater_than_or_equal') return actualNumber >= expectedNumber
       if (action === 'less_than') return actualNumber < expectedNumber
+      if (action === 'less_than_or_equal') return actualNumber <= expectedNumber
 
       return false
     }
 
-    if (action === 'equal') {
-      const list = Array.isArray(actual) ? actual : [actual]
-      return list.filter((v) => v !== null && v !== undefined).map(String).includes(String(expected))
+    const normalizeString = (val) => {
+      if (val == null) return ''
+      return String(val).trim().toLowerCase()
     }
 
-    if (action === 'contains') return this.contains(actual, expected)
+    const expectedStr = normalizeString(expected)
+    const list = Array.isArray(actual) ? actual : [actual]
+    const actualValues = list.filter((v) => !this.isEmpty(v)).map(normalizeString)
 
-    if (action === 'not_equal') {
-      const list = Array.isArray(actual) ? actual : [actual]
-      return !list.filter((v) => v !== null && v !== undefined).map(String).includes(String(expected))
-    }
-
-    if (action === 'does_not_contain') return !this.contains(actual, expected)
+    if (action === 'equal') return actualValues.some((v) => v === expectedStr)
+    if (action === 'not_equal') return actualValues.every((v) => v !== expectedStr)
+    if (action === 'contains') return actualValues.some((v) => v.includes(expectedStr))
+    if (action === 'does_not_contain') return actualValues.every((v) => !v.includes(expectedStr))
+    if (action === 'starts_with') return actualValues.some((v) => v.startsWith(expectedStr))
+    if (action === 'ends_with') return actualValues.some((v) => v.endsWith(expectedStr))
 
     return true
   }

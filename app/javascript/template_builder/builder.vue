@@ -725,6 +725,7 @@ import DocumentsEditorModal from './documents_editor_modal'
 import { IconPlus, IconUsersPlus, IconDeviceFloppy, IconChevronDown, IconEye, IconWritingSign, IconInnerShadowTop, IconInfoCircle, IconAdjustments, IconDownload, IconHistory, IconX } from '@tabler/icons-vue'
 import { v4 } from 'uuid'
 import { ref, computed, toRaw, defineAsyncComponent } from 'vue'
+import { isFieldHiddenByConditions } from '../lib/conditions'
 import * as i18n from './i18n'
 
 const isEmpty = (obj) => {
@@ -1417,84 +1418,12 @@ export default {
         return cache[cacheKey]
       }
 
-      if (field.conditions?.length) {
-        const result = field.conditions.reduce((acc, cond) => {
-          if (cond.operation === 'or') {
-            acc.push(acc.pop() || this.checkFieldCondition(cond, cache))
-          } else {
-            acc.push(this.checkFieldCondition(cond, cache))
-          }
+      const getFieldValue = (f) => f.default_value
+      const optionNameFn = (option, index) => option.value || `${this.t('option')} ${index + 1}`
 
-          return acc
-        }, [])
-
-        cache[cacheKey] = !result.includes(false)
-      } else {
-        cache[cacheKey] = true
-      }
+      cache[cacheKey] = !isFieldHiddenByConditions(field, this.fieldsUuidIndex, getFieldValue, optionNameFn, undefined, cache)
 
       return cache[cacheKey]
-    },
-    checkFieldCondition (condition, cache = {}) {
-      const field = this.fieldsUuidIndex[condition.field_uuid]
-
-      if (['not_empty', 'checked', 'equal', 'contains', 'greater_than', 'less_than'].includes(condition.action) && field && !this.checkFieldConditions(field, cache)) {
-        return false
-      }
-
-      const defaultValue = !field || isEmpty(field.default_value) ? null : field.default_value
-
-      if (['empty', 'unchecked'].includes(condition.action)) {
-        return isEmpty(defaultValue)
-      } else if (['not_empty', 'checked'].includes(condition.action)) {
-        return !isEmpty(defaultValue)
-      } else if (field?.type === 'number' && ['equal', 'not_equal', 'greater_than', 'less_than'].includes(condition.action)) {
-        const value = defaultValue
-
-        if (isEmpty(value) || isEmpty(condition.value)) return false
-
-        const actual = parseFloat(value)
-        const expected = parseFloat(condition.value)
-
-        if (Number.isNaN(actual) || Number.isNaN(expected)) return false
-
-        if (condition.action === 'equal') return Math.abs(actual - expected) < Number.EPSILON
-        if (condition.action === 'not_equal') return Math.abs(actual - expected) > Number.EPSILON
-        if (condition.action === 'greater_than') return actual > expected
-        if (condition.action === 'less_than') return actual < expected
-
-        return false
-      } else if (['equal', 'contains'].includes(condition.action) && field) {
-        if (field.options) {
-          const option = field.options.find((o) => o.uuid === condition.value)
-
-          if (option) {
-            const values = [defaultValue].flat()
-
-            return values.includes(this.optionValue(option, field.options.indexOf(option)))
-          } else {
-            return false
-          }
-        } else {
-          return [defaultValue].flat().includes(condition.value)
-        }
-      } else if (['not_equal', 'does_not_contain'].includes(condition.action) && field) {
-        if (field.options) {
-          const option = field.options.find((o) => o.uuid === condition.value)
-
-          if (option) {
-            const values = [defaultValue].flat()
-
-            return !values.includes(this.optionValue(option, field.options.indexOf(option)))
-          } else {
-            return false
-          }
-        } else {
-          return false
-        }
-      } else {
-        return true
-      }
     },
     normalizeFormula (formula, depth = 0) {
       if (depth > 10) return formula
@@ -2266,21 +2195,19 @@ export default {
     removeFieldConditions (field) {
       this.template.fields.forEach((f) => {
         if (f.conditions) {
-          f.conditions.forEach((c) => {
-            if (c.field_uuid === field.uuid) {
-              f.conditions.splice(f.conditions.indexOf(c), 1)
-            }
-          })
+          f.conditions = f.conditions.filter((c) => c.field_uuid !== field.uuid)
+          if (f.conditions.length === 0) {
+            delete f.conditions
+          }
         }
       })
 
       this.template.schema.forEach((item) => {
         if (item.conditions) {
-          item.conditions.forEach((c) => {
-            if (c.field_uuid === field.uuid) {
-              item.conditions.splice(item.conditions.indexOf(c), 1)
-            }
-          })
+          item.conditions = item.conditions.filter((c) => c.field_uuid !== field.uuid)
+          if (item.conditions.length === 0) {
+            delete item.conditions
+          }
         }
       })
     },

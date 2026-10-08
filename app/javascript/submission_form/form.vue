@@ -626,6 +626,7 @@
 
 <script>
 import FieldAreas from './areas'
+import { isFieldHiddenByConditions } from '../lib/conditions'
 import FormulaFieldAreas from './formula_areas'
 import AccessibilityAreas from './accessibility_areas'
 import ImageStep from './image_step'
@@ -645,7 +646,6 @@ import MarkdownContent from './markdown_content'
 import InviteForm from './invite_form'
 import FormCompleted from './completed'
 import { IconInnerShadowTop, IconArrowsDiagonal, IconWritingSign, IconArrowsDiagonalMinimize2 } from '@tabler/icons-vue'
-import AppearsOn from './appears_on'
 import i18n from './i18n'
 import { sanitizeUrl } from '@braintree/sanitize-url'
 
@@ -690,7 +690,6 @@ export default {
     AccessibilityAreas,
     ImageStep,
     SignatureStep,
-    AppearsOn,
     IconWritingSign,
     AttachmentStep,
     InitialsStep,
@@ -1358,84 +1357,16 @@ export default {
         return cache[cacheKey]
       }
 
-      if (field.conditions?.length) {
-        const result = field.conditions.reduce((acc, cond) => {
-          if (cond.operation === 'or') {
-            acc.push(acc.pop() || this.checkFieldCondition(cond, cache))
-          } else {
-            acc.push(this.checkFieldCondition(cond, cache))
-          }
-
-          return acc
-        }, [])
-
-        cache[cacheKey] = !result.includes(false)
-      } else {
-        cache[cacheKey] = true
+      const getFieldValue = (f) => {
+        const defaultValue = !f || isEmpty(f.default_value) ? null : f.default_value
+        return this.values[f.uuid] ?? defaultValue
       }
+
+      const optionNameFn = (option, index) => option.value || `${this.t('option')} ${index + 1}`
+
+      cache[cacheKey] = !isFieldHiddenByConditions(field, this.fieldsUuidIndex, getFieldValue, optionNameFn, undefined, cache)
 
       return cache[cacheKey]
-    },
-    checkFieldCondition (condition, cache = {}) {
-      const field = this.fieldsUuidIndex[condition.field_uuid]
-
-      if (['not_empty', 'checked', 'equal', 'contains', 'greater_than', 'less_than'].includes(condition.action) && field && !this.checkFieldConditions(field, cache)) {
-        return false
-      }
-
-      const defaultValue = !field || isEmpty(field.default_value) ? null : field.default_value
-
-      if (['empty', 'unchecked'].includes(condition.action)) {
-        return isEmpty(this.values[condition.field_uuid] ?? defaultValue)
-      } else if (['not_empty', 'checked'].includes(condition.action)) {
-        return !isEmpty(this.values[condition.field_uuid] ?? defaultValue)
-      } else if (field?.type === 'number' && ['equal', 'not_equal', 'greater_than', 'less_than'].includes(condition.action)) {
-        const value = this.values[condition.field_uuid] ?? defaultValue
-
-        if (isEmpty(value) || isEmpty(condition.value)) return false
-
-        const actual = parseFloat(value)
-        const expected = parseFloat(condition.value)
-
-        if (Number.isNaN(actual) || Number.isNaN(expected)) return false
-
-        if (condition.action === 'equal') return Math.abs(actual - expected) < Number.EPSILON
-        if (condition.action === 'not_equal') return Math.abs(actual - expected) > Number.EPSILON
-        if (condition.action === 'greater_than') return actual > expected
-        if (condition.action === 'less_than') return actual < expected
-
-        return false
-      } else if (['equal', 'contains'].includes(condition.action) && field) {
-        if (field.options) {
-          const option = field.options.find((o) => o.uuid === condition.value)
-
-          if (option) {
-            const values = [this.values[condition.field_uuid] ?? defaultValue].flat()
-
-            return values.includes(this.optionValue(option, field.options.indexOf(option)))
-          } else {
-            return false
-          }
-        } else {
-          return [this.values[condition.field_uuid] ?? defaultValue].flat().includes(condition.value)
-        }
-      } else if (['not_equal', 'does_not_contain'].includes(condition.action) && field) {
-        if (field.options) {
-          const option = field.options.find((o) => o.uuid === condition.value)
-
-          if (option) {
-            const values = [this.values[condition.field_uuid] ?? defaultValue].flat()
-
-            return !values.includes(this.optionValue(option, field.options.indexOf(option)))
-          } else {
-            return false
-          }
-        } else {
-          return false
-        }
-      } else {
-        return true
-      }
     },
     optionValue (option, index) {
       if (option.value) {
