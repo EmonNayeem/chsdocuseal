@@ -796,6 +796,7 @@ export default {
       customDragFieldRef: computed(() => this.customDragFieldRef),
       isSelectModeRef: computed(() => this.isSelectModeRef),
       isCmdKeyRef: computed(() => this.isCmdKeyRef),
+      fieldOrderStateRef: computed(() => this.fieldOrderStateRef),
       getFieldTypeIndex: this.getFieldTypeIndex
     }
   },
@@ -1146,6 +1147,11 @@ export default {
     fieldsDragFieldRef: () => ref(),
     customDragFieldRef: () => ref(),
     selectedAreasRef: () => ref([]),
+    fieldOrderStateRef: () => ref({
+      active: false,
+      submitterUuid: null,
+      fieldUuids: []
+    }),
     attachmentUuidsIndex () {
       return this.template.schema.reduce((acc, e, index) => {
         acc[e.attachment_uuid] = index

@@ -56,6 +56,9 @@
             >{{ t('required') }}</label>
           </template>
         </div>
+        <div v-if="isOrderMode" class="flex items-center space-x-1 px-1 pr-2">
+          <span v-if="orderNumber > 0" class="badge badge-primary badge-sm font-bold">{{ orderNumber }}</span>
+        </div>
         <div
           v-else-if="editable"
           class="flex items-center space-x-1"
@@ -374,6 +377,16 @@ export default {
       type: Boolean,
       required: false,
       default: true
+    },
+    isOrderMode: {
+      type: Boolean,
+      required: false,
+      default: false
+    },
+    orderNumber: {
+      type: Number,
+      required: false,
+      default: 0
     },
     defaultField: {
       type: Object,

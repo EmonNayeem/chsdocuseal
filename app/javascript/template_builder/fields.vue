@@ -35,13 +35,24 @@
     :editable="editable"
     class="mt-1"
   />
+  <div v-if="editable && !isShowVariables && submitterFields.length >= 2" class="flex items-center justify-end mt-2 mb-1">
+    <button v-if="!isOrderMode" class="btn btn-xs btn-outline" @click.prevent="startOrderMode">{{ t('order_fields') }}</button>
+    <div v-else class="flex gap-1">
+      <button class="btn btn-xs btn-primary" @click.prevent="applyOrderMode">{{ t('apply_order') }}</button>
+      <button class="btn btn-xs btn-outline" @click.prevent="resetOrderMode">{{ t('reset_order') }}</button>
+      <button class="btn btn-xs btn-ghost" @click.prevent="cancelOrderMode">{{ t('cancel_order') }}</button>
+    </div>
+  </div>
+  <div v-if="isOrderMode" class="text-xs text-base-content/70 mt-1 mb-2 px-1 text-center">
+    {{ t('order_fields_help') }}
+  </div>
   <div
     v-if="!isShowVariables"
     ref="fields"
-    class="fields mt-2"
-    :class="{ 'mb-1': !withCustomFields || !customFields.length }"
-    @dragover.prevent="onFieldDragover"
-    @drop="fieldsDragFieldRef.value ? reorderFields() : null"
+    class="fields"
+    :class="{ 'mb-1': !withCustomFields || !customFields.length, 'mt-2': !editable || submitterFields.length < 2 }"
+    @dragover.prevent="!isOrderMode && onFieldDragover($event)"
+    @drop="!isOrderMode && fieldsDragFieldRef.value ? reorderFields() : null"
   >
     <Field
       v-for="field in submitterFields"
@@ -53,13 +64,20 @@
       :with-signature-id="withSignatureId"
       :with-prefillable="withPrefillable"
       :default-field="defaultFieldsIndex[field.name]"
-      :draggable="editable"
+      :draggable="editable && !isOrderMode"
       :with-custom-fields="withCustomFields"
-      class="mb-1.5"
+      :is-order-mode="isOrderMode"
+      :order-number="fieldOrderUuids.indexOf(field.uuid) + 1"
+      :class="{
+        'border-t-2 border-t-primary': dragOverFieldUuid === field.uuid && dragInsertPosition === 'before',
+        'border-b-2 border-b-primary': dragOverFieldUuid === field.uuid && dragInsertPosition === 'after',
+        'mb-1.5': true
+      }"
       @add-custom-field="addCustomField"
       @dragstart="[fieldsDragFieldRef.value = field, removeDragOverlay($event), setDragPlaceholder($event)]"
       @save="save"
-      @dragend="[fieldsDragFieldRef.value = null, $emit('set-drag-placeholder', null)]"
+      @dragend="[fieldsDragFieldRef.value = null, dragOverFieldUuid = null, dragInsertPosition = null, $emit('set-drag-placeholder', null)]"
+      @dragleave="[dragOverFieldUuid = null, dragInsertPosition = null]"
       @remove="removeField"
       @scroll-to="$emit('scroll-to-area', $event)"
       @set-draw="$emit('set-draw', $event)"
@@ -454,7 +472,7 @@ export default {
     IconBracketsContain,
     DynamicVariables: defineAsyncComponent(() => import(/* webpackChunkName: "dynamic-editor" */ './dynamic_variables'))
   },
-  inject: ['save', 'backgroundColor', 'withPhone', 'withVerification', 'withKba', 'withPayment', 't', 'fieldsDragFieldRef', 'customDragFieldRef', 'baseFetch', 'selectedAreasRef', 'getFieldTypeIndex'],
+  inject: ['save', 'backgroundColor', 'withPhone', 'withVerification', 'withKba', 'withPayment', 't', 'fieldsDragFieldRef', 'customDragFieldRef', 'baseFetch', 'selectedAreasRef', 'getFieldTypeIndex', 'fieldOrderStateRef'],
   props: {
     fields: {
       type: Array,
@@ -577,10 +595,18 @@ export default {
       showCustomTab: false,
       defaultFieldsSearch: '',
       customFieldsSearch: '',
-      isShowVariables: false
+      isShowVariables: false,
+      dragOverFieldUuid: null,
+      dragInsertPosition: null
     }
   },
   computed: {
+    isOrderMode () {
+      return this.fieldOrderStateRef.value.active && this.fieldOrderStateRef.value.submitterUuid === this.selectedSubmitter.uuid
+    },
+    fieldOrderUuids () {
+      return this.fieldOrderStateRef.value.fieldUuids
+    },
     fieldNames: FieldType.computed.fieldNames,
     fieldIcons: FieldType.computed.fieldIcons,
     hasDynamicDocuments () {
@@ -1063,32 +1089,59 @@ export default {
     onFieldDragover (e) {
       if (this.fieldsDragFieldRef.value) {
         const targetField = e.target.closest('[data-uuid]')
-        const dragField = this.$refs.fields.querySelector(`[data-uuid="${this.fieldsDragFieldRef.value.uuid}"]`)
 
-        if (dragField && targetField && targetField !== dragField) {
-          const fields = Array.from(this.$refs.fields.children)
-          const currentIndex = fields.indexOf(dragField)
-          const targetIndex = fields.indexOf(targetField)
-
-          if (currentIndex < targetIndex) {
-            targetField.after(dragField)
+        if (targetField) {
+          const targetUuid = targetField.dataset.uuid
+          if (targetUuid !== this.fieldsDragFieldRef.value.uuid) {
+            const rect = targetField.getBoundingClientRect()
+            const midY = rect.top + rect.height / 2
+            this.dragOverFieldUuid = targetUuid
+            this.dragInsertPosition = e.clientY < midY ? 'before' : 'after'
           } else {
-            targetField.before(dragField)
+            this.dragOverFieldUuid = null
+            this.dragInsertPosition = null
           }
         }
       }
     },
-    reorderFields () {
-      Array.from(this.$refs.fields.children).forEach((el, index) => {
-        if (el.dataset.uuid !== this.fields[index].uuid) {
-          const field = this.fields.find((f) => f.uuid === el.dataset.uuid)
+    applySubmitterFieldOrder (orderedFieldUuids) {
+      const orderedPartyFields = orderedFieldUuids.map(uuid => this.fields.find(f => f.uuid === uuid)).filter(Boolean)
+      let partyIndex = 0
 
-          this.fields.splice(this.fields.indexOf(field), 1)
-          this.fields.splice(index, 0, field)
-        }
+      const reordered = this.fields.map((field) => {
+        if (field.submitter_uuid !== this.selectedSubmitter.uuid) return field
+
+        return orderedPartyFields[partyIndex++]
       })
 
-      this.save()
+      this.fields.splice(0, this.fields.length, ...reordered)
+    },
+    reorderFields () {
+      if (this.fieldsDragFieldRef.value && this.dragOverFieldUuid) {
+        const orderedPartyFields = [...this.submitterFields]
+        
+        const dragField = this.fieldsDragFieldRef.value
+        const targetFieldUuid = this.dragOverFieldUuid
+        const position = this.dragInsertPosition
+        
+        const dragIndex = orderedPartyFields.findIndex(f => f.uuid === dragField.uuid)
+        if (dragIndex > -1) {
+          orderedPartyFields.splice(dragIndex, 1)
+        }
+        
+        const targetIndex = orderedPartyFields.findIndex(f => f.uuid === targetFieldUuid)
+        if (targetIndex > -1) {
+          orderedPartyFields.splice(position === 'before' ? targetIndex : targetIndex + 1, 0, dragField)
+        }
+        
+        const orderedFieldUuids = orderedPartyFields.map(f => f.uuid)
+        
+        this.applySubmitterFieldOrder(orderedFieldUuids)
+        this.save()
+      }
+      
+      this.dragOverFieldUuid = null
+      this.dragInsertPosition = null
     },
     removeSubmitter (submitter) {
       [...this.fields].forEach((field) => {
@@ -1106,6 +1159,28 @@ export default {
       this.$emit('remove-submitter', submitter)
 
       this.save()
+    },
+    startOrderMode () {
+      this.fieldOrderStateRef.value.active = true
+      this.fieldOrderStateRef.value.submitterUuid = this.selectedSubmitter.uuid
+      this.fieldOrderStateRef.value.fieldUuids = []
+    },
+    applyOrderMode () {
+      if (this.fieldOrderStateRef.value.fieldUuids.length > 0) {
+        const clickedUuids = this.fieldOrderStateRef.value.fieldUuids
+        const unclickedUuids = this.submitterFields.map(f => f.uuid).filter(uuid => !clickedUuids.includes(uuid))
+        this.applySubmitterFieldOrder([...clickedUuids, ...unclickedUuids])
+        this.save()
+      }
+      this.cancelOrderMode()
+    },
+    resetOrderMode () {
+      this.fieldOrderStateRef.value.fieldUuids = []
+    },
+    cancelOrderMode () {
+      this.fieldOrderStateRef.value.active = false
+      this.fieldOrderStateRef.value.submitterUuid = null
+      this.fieldOrderStateRef.value.fieldUuids = []
     },
     removeField (field, save = true) {
       this.fields.splice(this.fields.indexOf(field), 1)

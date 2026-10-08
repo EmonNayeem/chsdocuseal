@@ -217,6 +217,10 @@
       @mousedown.stop="startResize"
       @touchstart="startTouchResize"
     />
+    <div v-if="orderNumber > 0" class="absolute -top-3 -right-3 z-50 pointer-events-none">
+      <span v-if="field.areas[0] === area" class="badge badge-primary font-bold shadow-lg">{{ orderNumber }}</span>
+      <span v-else class="badge badge-primary opacity-50 font-bold shadow-sm">{{ orderNumber }}</span>
+    </div>
   </div>
 </template>
 
@@ -232,7 +236,7 @@ export default {
     IconCheck,
     AreaTitle
   },
-  inject: ['template', 'save', 't', 'isInlineSize', 'selectedAreasRef', 'isCmdKeyRef', 'getFieldTypeIndex'],
+  inject: ['template', 'save', 't', 'isInlineSize', 'selectedAreasRef', 'isCmdKeyRef', 'getFieldTypeIndex', 'fieldOrderStateRef'],
   props: {
     area: {
       type: Object,
@@ -335,6 +339,14 @@ export default {
     }
   },
   computed: {
+    isOrderMode () {
+      return this.fieldOrderStateRef && this.fieldOrderStateRef.value.active && this.fieldOrderStateRef.value.submitterUuid === this.field.submitter_uuid
+    },
+    orderNumber () {
+      if (!this.isOrderMode) return 0
+      const index = this.fieldOrderStateRef.value.fieldUuids.indexOf(this.field.uuid)
+      return index > -1 ? index + 1 : 0
+    },
     fieldNames: FieldType.computed.fieldNames,
     fieldLabels: FieldType.computed.fieldLabels,
     fieldIcons: FieldType.computed.fieldIcons,
@@ -539,6 +551,17 @@ export default {
     })
   },
   methods: {
+    toggleOrderNumber () {
+      if (!this.isOrderMode) return
+      
+      const uuids = this.fieldOrderStateRef.value.fieldUuids
+      const index = uuids.indexOf(this.field.uuid)
+      if (index === -1) {
+        uuids.push(this.field.uuid)
+      } else {
+        uuids.splice(index, 1)
+      }
+    },
     buildDefaultName: Field.methods.buildDefaultName,
     buildAreaOptionValue (area) {
       const option = this.optionsUuidIndex[area.option_uuid]
@@ -729,6 +752,13 @@ export default {
         return
       }
 
+      if (this.isOrderMode) {
+        e.stopPropagation()
+        e.preventDefault()
+        this.toggleOrderNumber()
+        return
+      }
+
       if (this.inputMode && (this.isValueInput || this.isCheckboxInput || this.isSelectInput)) {
         return
       }
@@ -785,6 +815,13 @@ export default {
     },
     startMouseMove (e) {
       if (e.target !== this.$refs.touchTarget && e.target !== this.$refs.touchValueTarget) {
+        return
+      }
+
+      if (this.isOrderMode) {
+        e.stopPropagation()
+        e.preventDefault()
+        this.toggleOrderNumber()
         return
       }
 
