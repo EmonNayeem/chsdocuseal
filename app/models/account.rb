@@ -56,6 +56,7 @@ class Account < ApplicationRecord
                                          inverse_of: :account, class_name: 'User'
 
   has_many :departments, dependent: :destroy
+  has_many :recipient_contacts, dependent: :destroy
 
   attribute :timezone, :string, default: 'UTC'
   attribute :locale, :string, default: 'en-US'

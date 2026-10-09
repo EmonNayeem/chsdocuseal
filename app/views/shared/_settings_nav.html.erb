@@ -56,6 +56,13 @@
                       class: 'text-base hover:bg-base-300' %>
         </li>
       <% end %>
+      <% if current_user.platform_admin? || current_user.department_acl_admin? %>
+        <li>
+          <%= link_to 'Recipients',
+                      settings_recipient_contacts_path,
+                      class: 'text-base hover:bg-base-300' %>
+        </li>
+      <% end %>
       <% if current_user.platform_admin? %>
         <li>
           <%= link_to 'Companies',

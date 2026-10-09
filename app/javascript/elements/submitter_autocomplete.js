@@ -64,7 +64,23 @@ export default class extends HTMLElement {
 
     div.setAttribute('dir', 'auto')
 
-    div.textContent = item[this.dataset.field]
+    if (item.source === 'directory') {
+      const visibility = item.visibility === 'shared' ? 'Shared' : item.company_name
+      const extraFields = []
+
+      if (item.name && this.dataset.field !== 'name') extraFields.push(item.name)
+      if (item.email && this.dataset.field !== 'email') extraFields.push(item.email)
+
+      const subtext = extraFields.join(' - ')
+      const badge = visibility ? ` <span class="opacity-70">(${visibility})</span>` : ''
+
+      div.innerHTML = `
+        <div>${item[this.dataset.field] || ''}</div>
+        <div class="text-xs mt-0.5">${subtext}${subtext ? badge : badge.trim()}</div>
+      `
+    } else {
+      div.textContent = item[this.dataset.field]
+    }
 
     return div
   }

@@ -1,0 +1,38 @@
+<%= form_with(model: @recipient_contact, url: @recipient_contact.new_record? ? settings_recipient_contacts_path : settings_recipient_contact_path(@recipient_contact), local: true, class: 'p-6 pb-2', data: { turbo_frame: :_top }) do |f| %>
+
+  <% if @recipient_contact.errors.any? %>
+    <div class="alert alert-error">
+      <%= @recipient_contact.errors.full_messages.to_sentence %>
+    </div>
+  <% end %>
+
+  <div class="form-control w-full mb-4">
+    <%= f.label :name, class: 'label font-bold' %>
+    <%= f.text_field :name, class: 'input input-bordered w-full' %>
+  </div>
+
+  <div class="form-control w-full mb-4">
+    <%= f.label :email, class: 'label font-bold' %>
+    <%= f.email_field :email, class: 'input input-bordered w-full', required: true %>
+  </div>
+
+  <div class="form-control w-full mb-4">
+    <%= f.label :phone, class: 'label font-bold' %>
+    <%= f.text_field :phone, class: 'input input-bordered w-full' %>
+  </div>
+
+  <% if current_user.platform_admin? %>
+    <div class="form-control w-full mb-4">
+      <%= f.label :company_id, 'Visibility / Company', class: 'label font-bold' %>
+      <%= f.collection_select :company_id, @companies, :id, :name, { include_blank: 'Shared (All companies)' }, class: 'select select-bordered w-full' %>
+    </div>
+  <% end %>
+
+  <div class="modal-action bg-base-200 mt-6 -mx-6 px-6 py-4 flex items-center justify-between rounded-b-box">
+    <%= link_to 'Cancel',
+                settings_recipient_contacts_path,
+                class: 'btn btn-outline',
+                data: { turbo_frame: '_top' } %>
+    <%= f.submit class: 'btn btn-primary' %>
+  </div>
+<% end %>

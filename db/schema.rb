@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_09_30_141500) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_09_124500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -363,6 +363,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_141500) do
     t.index ["uid"], name: "index_oauth_applications_on_uid", unique: true
   end
 
+  create_table "recipient_contacts", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.bigint "company_id"
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.string "name"
+    t.string "phone"
+    t.datetime "updated_at", null: false
+    t.index ["account_id", "email"], name: "index_recipient_contacts_on_account_id_and_email", unique: true
+    t.index ["account_id"], name: "index_recipient_contacts_on_account_id"
+    t.index ["company_id"], name: "index_recipient_contacts_on_company_id"
+  end
+
   create_table "search_entries", force: :cascade do |t|
     t.bigint "account_id", null: false
     t.datetime "created_at", null: false
@@ -696,6 +709,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_09_30_141500) do
   add_foreign_key "oauth_access_grants", "users", column: "resource_owner_id"
   add_foreign_key "oauth_access_tokens", "oauth_applications", column: "application_id"
   add_foreign_key "oauth_access_tokens", "users", column: "resource_owner_id"
+  add_foreign_key "recipient_contacts", "accounts"
+  add_foreign_key "recipient_contacts", "companies"
   add_foreign_key "submission_events", "accounts"
   add_foreign_key "submission_events", "companies"
   add_foreign_key "submission_events", "submissions"

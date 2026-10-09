@@ -52,6 +52,7 @@ class Company < ApplicationRecord
   has_many :template_versions, dependent: :restrict_with_error
   has_many :submission_events, dependent: :restrict_with_error
   has_many :submitter_reminder_deliveries, dependent: :restrict_with_error
+  has_many :recipient_contacts, dependent: :restrict_with_error
 
   validates :name, presence: true, uniqueness: { scope: :account_id, case_sensitive: false }
   validates :code, presence: true, uniqueness: { scope: :account_id, case_sensitive: false }

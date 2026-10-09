@@ -13,6 +13,8 @@ class Ability
     else
       editor_abilities(user)
     end
+
+    recipient_contact_abilities(user)
   end
 
   private
@@ -113,5 +115,16 @@ class Ability
     can :manage, EncryptedUserConfig, user_id: user.id
     can :manage, UserConfig, user_id: user.id
     can :manage, AccessToken, user_id: user.id
+  end
+
+  def recipient_contact_abilities(user)
+    if user.platform_admin?
+      can :manage, RecipientContact, account_id: user.account_id
+    elsif user.department_acl_admin?
+      can :read, RecipientContact, account_id: user.account_id, company_id: [nil, user.company_id]
+      can :manage, RecipientContact, account_id: user.account_id, company_id: user.company_id
+    else
+      can :read, RecipientContact, account_id: user.account_id, company_id: [nil, user.company_id]
+    end
   end
 end
