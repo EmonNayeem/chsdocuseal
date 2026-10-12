@@ -398,22 +398,37 @@ module Submissions
 
     def build_submitter(submission:, attrs:, uuid:, is_order_sent:, user:, preferences:, params:)
       email = Submissions.normalize_email(attrs[:email])
-      submitter_preferences = Submitters.normalize_preferences(submission.account, user,
-                                                               attrs.merge(submitter_message_preferences(uuid, params)))
+      submitter_preferences = Submitters.normalize_preferences(
+        submission.account, user, attrs.merge(submitter_message_preferences(uuid, params))
+      )
       values = attrs[:values] || {}
+      recipient = email.present? ? RecipientContact.visible_to(user).find_by(email: email) : nil
+      metadata = (attrs[:metadata] || {}).deep_dup
 
+      if recipient
+        metadata['recipient'] = recipient.metadata_snapshot
+        apply_recipient_metadata_mapping(submission, values, uuid, attrs, recipient, email)
+      end
+
+      create_submitter_record(submission, attrs, uuid, is_order_sent, user, preferences,
+                              submitter_preferences, values, recipient, metadata, email)
+    end
+
+    def create_submitter_record(submission, attrs, uuid, is_order_sent, user, preferences,
+                                submitter_preferences, values, recipient, metadata, email)
       phone_field_uuid = find_phone_field(submission, values)&.dig('uuid')
+      phone_val = attrs[:phone].presence || recipient&.phone || values[phone_field_uuid]
 
       submitter =
         submission.submitters.new(
           email:,
-          phone: (attrs[:phone] || values[phone_field_uuid]).to_s.gsub(/[^0-9+]/, ''),
-          name: attrs[:name],
+          phone: phone_val.to_s.gsub(/[^0-9+]/, ''),
+          name: attrs[:name].presence || recipient&.name,
           account_id: user.account_id,
           external_id: attrs[:external_id].presence || attrs[:application_key],
           completed_at: attrs[:completed].present? ? Time.current : nil,
           values: values.except(phone_field_uuid),
-          metadata: attrs[:metadata] || {},
+          metadata:,
           preferences: preferences.merge(submitter_preferences)
                                   .merge({ default_values: attrs[:values] }.compact_blank)
                                   .except('bcc_completed'),
@@ -424,8 +439,40 @@ module Submissions
         submitter.preferences['send_email'] != false && email.present? && is_order_sent ? Time.current : nil
 
       assign_completed_attributes(submitter) if submitter.completed_at?
-
       submitter
+    end
+
+    def apply_recipient_metadata_mapping(submission, values, uuid, attrs, contact, email)
+      (submission.template_fields || submission.template.fields).each do |field|
+        next if field['submitter_uuid'] != uuid
+
+        mapping = field['recipient_mapping']
+        next if mapping.blank? || values[field['uuid']].present?
+
+        val = resolve_metadata_value(mapping, attrs, contact, email)
+        next if val.blank?
+
+        apply_metadata_to_field(field, values, val)
+      end
+    end
+
+    def resolve_metadata_value(mapping, attrs, contact, email)
+      case mapping
+      when 'name' then attrs[:name].presence || contact.name
+      when 'email' then email
+      when 'phone' then attrs[:phone].presence || contact.phone
+      when 'job_title' then contact.job_title
+      when 'department' then contact.department
+      end
+    end
+
+    def apply_metadata_to_field(field, values, val)
+      if field['type'].in?(%w[select radio])
+        options = field['options']&.pluck('value') || []
+        values[field['uuid']] = val if options.include?(val)
+      else
+        values[field['uuid']] = val
+      end
     end
 
     def find_phone_field(submission, values)

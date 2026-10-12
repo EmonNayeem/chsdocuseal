@@ -15,6 +15,17 @@ RSpec.describe 'Templates Preferences Reset', type: :request do
     login_as(user, scope: :user)
   end
 
+  describe 'GET /templates/:id/preferences' do
+    it 'renders successfully under en-US locale' do
+      account.update!(locale: 'en-US')
+
+      get template_preferences_path(template)
+
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include('Signature request reminder email')
+    end
+  end
+
   describe 'DELETE /templates/:id/preferences' do
     context 'with general template email and per-party emails' do
       before do

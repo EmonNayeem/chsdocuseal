@@ -73,6 +73,8 @@ class SubmittersAutocompleteController < ApplicationController
         'email' => contact.email,
         'name' => contact.name,
         'phone' => contact.phone,
+        'job_title' => contact.job_title,
+        'department' => contact.department,
         'source' => 'directory',
         'visibility' => contact.shared? ? 'shared' : 'company',
         'company_name' => contact.company&.name

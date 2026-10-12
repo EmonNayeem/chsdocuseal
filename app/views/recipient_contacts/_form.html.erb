@@ -21,6 +21,16 @@
     <%= f.text_field :phone, class: 'input input-bordered w-full' %>
   </div>
 
+  <div class="form-control w-full mb-4">
+    <%= f.label :job_title, 'Job Title', class: 'label font-bold' %>
+    <%= f.text_field :job_title, class: 'input input-bordered w-full' %>
+  </div>
+
+  <div class="form-control w-full mb-4">
+    <%= f.label :department, 'Department', class: 'label font-bold' %>
+    <%= f.text_field :department, class: 'input input-bordered w-full' %>
+  </div>
+
   <% if current_user.platform_admin? %>
     <div class="form-control w-full mb-4">
       <%= f.label :company_id, 'Visibility / Company', class: 'label font-bold' %>

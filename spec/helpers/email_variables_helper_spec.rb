@@ -31,7 +31,12 @@ RSpec.describe EmailVariablesHelper, type: :helper do
       result = helper.invitation_email_variables(template)
 
       expect(result.first[:group]).to eq('General')
-      expect(result.first[:items]).to eq(AccountConfig::EMAIL_VARIABLES[AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY])
+      expect(result.first[:items]).to include(*AccountConfig::EMAIL_VARIABLES[AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY])
+
+      expect(result.first[:items]).to include(
+        { label: 'Recipient Name', value: 'recipient.name' },
+        { label: 'Recipient Job title', value: 'recipient.job_title' }
+      )
 
       expect(result.length).to eq(7) # 1 general + 6 parties
 
@@ -40,7 +45,9 @@ RSpec.describe EmailVariablesHelper, type: :helper do
       expect(party1[:items]).to include(
         { label: 'Name', value: 'submitters[1].name' },
         { label: 'First name', value: 'submitters[1].first_name' },
-        { label: 'Email', value: 'submitters[1].email' }
+        { label: 'Email', value: 'submitters[1].email' },
+        { label: 'Job title', value: 'submitters[1].job_title' },
+        { label: 'Department', value: 'submitters[1].department' }
       )
 
       party6 = result[6]
@@ -48,7 +55,8 @@ RSpec.describe EmailVariablesHelper, type: :helper do
       expect(party6[:items]).to include(
         { label: 'Name', value: 'submitters[6].name' },
         { label: 'First name', value: 'submitters[6].first_name' },
-        { label: 'Email', value: 'submitters[6].email' }
+        { label: 'Email', value: 'submitters[6].email' },
+        { label: 'Job title', value: 'submitters[6].job_title' }
       )
     end
   end

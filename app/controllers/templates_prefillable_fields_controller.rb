@@ -13,9 +13,17 @@ class TemplatesPrefillableFieldsController < ApplicationController
     if params[:prefillable] == 'false'
       field.delete('prefillable')
       field.delete('readonly')
+      field.delete('recipient_mapping')
     elsif params[:prefillable] == 'true'
       field['prefillable'] = true
       field['readonly'] = true
+
+      allowed_mappings = %w[name email phone job_title department]
+      if params[:recipient_mapping].present? && params[:recipient_mapping].in?(allowed_mappings)
+        field['recipient_mapping'] = params[:recipient_mapping]
+      elsif params.key?(:recipient_mapping)
+        field.delete('recipient_mapping')
+      end
     end
 
     @template.save!

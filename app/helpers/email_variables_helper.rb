@@ -14,9 +14,21 @@ module EmailVariablesHelper
         items: [
           { label: 'Name', value: "submitters[#{index + 1}].name" },
           { label: 'First name', value: "submitters[#{index + 1}].first_name" },
-          { label: 'Email', value: "submitters[#{index + 1}].email" }
+          { label: 'Email', value: "submitters[#{index + 1}].email" },
+          { label: 'Job title', value: "submitters[#{index + 1}].job_title" },
+          { label: 'Department', value: "submitters[#{index + 1}].department" }
         ]
       }
+    end
+
+    if [AccountConfig::SUBMITTER_INVITATION_EMAIL_KEY, AccountConfig::SUBMITTER_VIEW_INVITATION_EMAIL_KEY, AccountConfig::SUBMITTER_INVITATION_REMINDER_EMAIL_KEY].include?(config_key)
+      base_variables += [
+        { label: 'Recipient Name', value: 'recipient.name' },
+        { label: 'Recipient Email', value: 'recipient.email' },
+        { label: 'Recipient Phone', value: 'recipient.phone' },
+        { label: 'Recipient Job title', value: 'recipient.job_title' },
+        { label: 'Recipient Department', value: 'recipient.department' }
+      ]
     end
 
     [

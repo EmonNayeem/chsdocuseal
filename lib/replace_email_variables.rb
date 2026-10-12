@@ -25,6 +25,13 @@ module ReplaceEmailVariables
   SUBMITTERS_N_FIELD_VALUE = /\{+submitters\[(?<index>\d+)\]\.(?<field_name>[^}]+)\}+/i
   DOCUMENTS_LINKS = /\{+documents\.links\}+/i
   DOCUMENTS_LINK = /\{+documents\.link\}+/i
+  RECIPIENT_NAME = /\{+recipient\.name\}+/i
+  RECIPIENT_EMAIL = /\{+recipient\.email\}+/i
+  RECIPIENT_PHONE = /\{+recipient\.phone\}+/i
+  RECIPIENT_JOB_TITLE = /\{+recipient\.job_title\}+/i
+  RECIPIENT_DEPARTMENT = /\{+recipient\.department\}+/i
+  SUBMITTERS_N_JOB_TITLE = /\{+submitters\[(?<index>\d+)\]\.job_title\}+/i
+  SUBMITTERS_N_DEPARTMENT = /\{+submitters\[(?<index>\d+)\]\.department\}+/i
 
   EMAIL_HOST = ENV.fetch('EMAIL_HOST', nil)
 
@@ -85,6 +92,20 @@ module ReplaceEmailVariables
       build_submitters_n_field(submitter.submission, match[:index].to_i - 1, :values, match[:field_name].to_s.strip)
     end
 
+    text = replace(text, RECIPIENT_NAME, html_escape:) { submitter.name || submitter.email || submitter.phone }
+    text = replace(text, RECIPIENT_EMAIL, html_escape:) { submitter.email }
+    text = replace(text, RECIPIENT_PHONE, html_escape:) { submitter.phone }
+    text = replace(text, RECIPIENT_JOB_TITLE, html_escape:) { submitter.metadata.dig('recipient', 'job_title') }
+    text = replace(text, RECIPIENT_DEPARTMENT, html_escape:) { submitter.metadata.dig('recipient', 'department') }
+
+    text = replace(text, SUBMITTERS_N_JOB_TITLE, html_escape:) do |match|
+      build_submitters_n_metadata(submitter.submission, match[:index].to_i - 1, 'job_title')
+    end
+
+    text = replace(text, SUBMITTERS_N_DEPARTMENT, html_escape:) do |match|
+      build_submitters_n_metadata(submitter.submission, match[:index].to_i - 1, 'department')
+    end
+
     text = replace(text, SUBMITTER_FIELD_VALUE, html_escape:) do |match|
       submitters = submitter.submission.template_submitters || submitter.submission.template.submitters
       index = submitters.find_index { |e| e['uuid'] == submitter.uuid }
@@ -102,6 +123,14 @@ module ReplaceEmailVariables
     Rails.application.routes.url_helpers.submissions_preview_url(
       submitter.submission.slug, { sig:, **url_options }.compact
     )
+  end
+
+  def build_submitters_n_metadata(submission, index, key)
+    uuid = (submission.template_submitters || submission.template.submitters).dig(index, 'uuid')
+    submitter = submission.submitters.find { |s| s.uuid == uuid }
+    return unless submitter
+
+    submitter.metadata.dig('recipient', key)
   end
 
   def build_submitters_n_field(submission, index, field_name, value_name = nil)

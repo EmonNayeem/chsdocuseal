@@ -16,22 +16,30 @@
     </div>
 
     <div class="overflow-x-auto">
-      <table class="table w-full table-lg rounded-b-none overflow-hidden">
+      <table class="table w-full rounded-b-none overflow-hidden">
         <thead class="bg-base-200">
           <tr class="text-neutral uppercase">
-            <th>Name</th>
+            <th>Recipient</th>
             <th>Email</th>
             <th>Phone</th>
             <th>Visibility</th>
-            <th class="text-right" width="1px"></th>
+            <th class="text-right whitespace-nowrap" width="1px">Actions</th>
           </tr>
         </thead>
 
         <tbody>
           <% @recipient_contacts.each do |contact| %>
             <tr>
-              <td><%= contact.name %></td>
-              <td><%= contact.email %></td>
+              <td>
+                <div class="font-medium"><%= contact.name %></div>
+                <% metadata = [contact.job_title, contact.department].compact_blank %>
+                <% if metadata.present? %>
+                  <div class="text-xs opacity-70"><%= metadata.join(' · ') %></div>
+                <% end %>
+              </td>
+              <td>
+                <span class="block truncate max-w-xs" title="<%= contact.email %>"><%= contact.email %></span>
+              </td>
               <td><%= contact.phone %></td>
               <td>
                 <% if contact.shared? %>
@@ -40,19 +48,21 @@
                   <%= contact.company&.name %>
                 <% end %>
               </td>
-              <td class="flex items-center space-x-2 justify-end">
-                <% if can?(:manage, contact) %>
-                  <%= link_to 'Edit',
-                              edit_settings_recipient_contact_path(contact),
-                              class: 'btn btn-outline btn-xs',
-                              data: { turbo_frame: 'modal' } %>
+              <td class="whitespace-nowrap text-right" width="1px">
+                <div class="flex items-center space-x-2 justify-end">
+                  <% if can?(:manage, contact) %>
+                    <%= link_to 'Edit',
+                                edit_settings_recipient_contact_path(contact),
+                                class: 'btn btn-outline btn-xs',
+                                data: { turbo_frame: 'modal' } %>
 
-                  <%= button_to 'Delete',
-                                settings_recipient_contact_path(contact),
-                                method: :delete,
-                                class: 'btn btn-outline btn-error btn-xs',
-                                data: { turbo_confirm: 'Are you sure?' } %>
-                <% end %>
+                    <%= button_to 'Delete',
+                                  settings_recipient_contact_path(contact),
+                                  method: :delete,
+                                  class: 'btn btn-outline btn-error btn-xs',
+                                  data: { turbo_confirm: 'Are you sure?' } %>
+                  <% end %>
+                </div>
               </td>
             </tr>
           <% end %>

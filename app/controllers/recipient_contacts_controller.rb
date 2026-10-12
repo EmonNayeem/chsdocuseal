@@ -81,9 +81,9 @@ class RecipientContactsController < ApplicationController
 
   def recipient_contact_params
     if current_user.platform_admin?
-      params.require(:recipient_contact).permit(:name, :email, :phone, :company_id)
+      params.require(:recipient_contact).permit(:name, :email, :phone, :company_id, :job_title, :department)
     else
-      params.require(:recipient_contact).permit(:name, :email, :phone)
+      params.require(:recipient_contact).permit(:name, :email, :phone, :job_title, :department)
     end
   end
 end

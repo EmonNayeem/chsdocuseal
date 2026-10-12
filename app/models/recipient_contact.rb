@@ -5,7 +5,9 @@
 # Table name: recipient_contacts
 #
 #  id         :bigint           not null, primary key
+#  department :string
 #  email      :string           not null
+#  job_title  :string
 #  name       :string
 #  phone      :string
 #  created_at :datetime         not null
@@ -50,12 +52,22 @@ class RecipientContact < ApplicationRecord
     shared? ? 'Shared' : company&.name
   end
 
+  def metadata_snapshot
+    {
+      'contact_id' => id,
+      'job_title' => job_title,
+      'department' => department
+    }.compact
+  end
+
   private
 
   def normalize_fields
     self.email = email.to_s.strip.downcase
     self.name = name.strip if name.present?
     self.phone = phone.strip if phone.present?
+    self.job_title = job_title.strip if job_title.present?
+    self.department = department.strip if department.present?
   end
 
   def company_belongs_to_account

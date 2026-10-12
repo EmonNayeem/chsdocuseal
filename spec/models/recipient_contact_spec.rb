@@ -5,7 +5,9 @@
 # Table name: recipient_contacts
 #
 #  id         :bigint           not null, primary key
+#  department :string
 #  email      :string           not null
+#  job_title  :string
 #  name       :string
 #  phone      :string
 #  created_at :datetime         not null
@@ -44,6 +46,23 @@ RSpec.describe RecipientContact, type: :model do
 
       expect(contact.email).to eq('person@example.com')
       expect(contact.errors[:email]).to include('has already been taken')
+    end
+
+    it 'normalizes job_title and department' do
+      contact = build(:recipient_contact, account: account, job_title: ' Manager ', department: ' HR ')
+      contact.valid?
+
+      expect(contact.job_title).to eq('Manager')
+      expect(contact.department).to eq('HR')
+    end
+
+    it 'returns metadata_snapshot' do
+      contact = create(:recipient_contact, account: account, job_title: 'Manager', department: 'HR')
+      expect(contact.metadata_snapshot).to eq({
+                                                'contact_id' => contact.id,
+                                                'job_title' => 'Manager',
+                                                'department' => 'HR'
+                                              })
     end
 
     it 'allows same email in different accounts' do

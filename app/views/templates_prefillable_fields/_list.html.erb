@@ -1,6 +1,20 @@
-<div id="prefillable_fields_list" class="flex gap-1 px-0.5 mt-2 flex-wrap">
+<div id="prefillable_fields_list" class="flex flex-col gap-2 px-0.5 mt-2">
   <% template.fields.each do |f| %>
     <% next unless f['prefillable'] %>
-    <%= button_to button_title(title: f['name'].presence || f['type'].capitalize, disabled_with: f['name'].presence || f['type'].capitalize, icon: svg_icon('x', class: 'w-4 h-4'), icon_disabled: svg_icon('loader', class: 'w-4 h-4 animate-spin')), template_prefillable_fields_path(template), params: { field_uuid: f['uuid'], prefillable: 'false' }, class: 'badge badge-lg badge-primary space-x-1 pr-3 pl-2', form: { data: { close_on_submit: false } } %>
+    <div class="flex items-center justify-between border rounded p-2 bg-base-50">
+      <div class="font-medium text-sm"><%= f['name'].presence || f['type'].capitalize %></div>
+      <div class="flex items-center space-x-2">
+        <%= form_with url: template_prefillable_fields_path(template), method: :post, data: { close_on_submit: false } do |form| %>
+          <%= form.hidden_field :field_uuid, value: f['uuid'] %>
+          <%= form.hidden_field :prefillable, value: 'true' %>
+          <%= form.select :recipient_mapping,
+                          options_for_select([['Auto-fill: None', ''], ['Name', 'name'], ['Email', 'email'], ['Phone', 'phone'], ['Job Title', 'job_title'], ['Department', 'department']], f['recipient_mapping']),
+                          {},
+                          class: 'select select-sm select-bordered',
+                          onchange: 'this.form.requestSubmit()' %>
+        <% end %>
+        <%= button_to svg_icon('trash', class: 'w-4 h-4'), template_prefillable_fields_path(template), params: { field_uuid: f['uuid'], prefillable: 'false' }, class: 'btn btn-square btn-sm btn-ghost text-error', form: { data: { close_on_submit: false } } %>
+      </div>
+    </div>
   <% end %>
 </div>

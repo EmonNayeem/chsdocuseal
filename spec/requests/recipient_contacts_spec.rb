@@ -52,22 +52,38 @@ RSpec.describe 'RecipientContacts', type: :request do
 
     it 'can create Shared contact' do
       post settings_recipient_contacts_path, params: {
-        recipient_contact: { name: 'New Shared', email: 'new.shared@example.com', company_id: '' }
+        recipient_contact: {
+          name: 'New Shared',
+          email: 'new.shared@example.com',
+          company_id: '',
+          job_title: 'Engineer',
+          department: 'IT'
+        }
       }
       expect(response).to redirect_to(settings_recipient_contacts_path)
 
       contact = RecipientContact.find_by(email: 'new.shared@example.com')
       expect(contact.company_id).to be_nil
+      expect(contact.job_title).to eq('Engineer')
+      expect(contact.department).to eq('IT')
     end
 
     it 'can create company recipient' do
       post settings_recipient_contacts_path, params: {
-        recipient_contact: { name: 'New C1', email: 'new.c1@example.com', company_id: chs_company.id }
+        recipient_contact: {
+          name: 'New C1',
+          email: 'new.c1@example.com',
+          company_id: chs_company.id,
+          job_title: 'Manager',
+          department: 'HR'
+        }
       }
       expect(response).to redirect_to(settings_recipient_contacts_path)
 
       contact = RecipientContact.find_by(email: 'new.c1@example.com')
       expect(contact.company_id).to eq(chs_company.id)
+      expect(contact.job_title).to eq('Manager')
+      expect(contact.department).to eq('HR')
     end
 
     it 'can edit visibility' do
@@ -134,9 +150,11 @@ RSpec.describe 'RecipientContacts', type: :request do
 
     it 'can edit own Company contact' do
       patch settings_recipient_contact_path(chs_contact), params: {
-        recipient_contact: { name: 'Updated' }
+        recipient_contact: { name: 'Updated', job_title: 'CEO', department: 'Executive' }
       }
       expect(chs_contact.reload.name).to eq('Updated')
+      expect(chs_contact.job_title).to eq('CEO')
+      expect(chs_contact.department).to eq('Executive')
     end
 
     it 'cannot edit Shared contact' do

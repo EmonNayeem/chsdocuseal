@@ -33,6 +33,25 @@ export default class extends HTMLElement {
         textarea.dispatchEvent(new Event('input', { bubbles: true }))
       }
     })
+
+    const mappedFields = submitterItemEl.querySelectorAll('[data-recipient-mapping]')
+    mappedFields.forEach((el) => {
+      const key = el.dataset.recipientMapping
+      if (item[key] != null) {
+        if (el.tagName === 'SELECT' || el.type === 'radio') {
+          // Check if option exists
+          const options = el.tagName === 'SELECT' ? Array.from(el.options).map(o => o.value) : Array.from(document.querySelectorAll(`input[name="${el.name}"]`)).map(o => o.value)
+          if (options.includes(item[key])) {
+            el.value = item[key]
+            el.dispatchEvent(new Event('change', { bubbles: true }))
+          }
+        } else {
+          el.value = item[key]
+          el.dispatchEvent(new Event('input', { bubbles: true }))
+          el.dispatchEvent(new Event('change', { bubbles: true }))
+        }
+      }
+    })
   }
 
   fetch = (text, resolve) => {
@@ -72,11 +91,18 @@ export default class extends HTMLElement {
       if (item.email && this.dataset.field !== 'email') extraFields.push(item.email)
 
       const subtext = extraFields.join(' - ')
+
+      const metaFields = []
+      if (item.job_title) metaFields.push(item.job_title)
+      if (item.department) metaFields.push(item.department)
+      const metaText = metaFields.length > 0 ? `<div class="text-xs mt-0.5 opacity-80">${metaFields.join(' &middot; ')}</div>` : ''
+
       const badge = visibility ? ` <span class="opacity-70">(${visibility})</span>` : ''
 
       div.innerHTML = `
         <div>${item[this.dataset.field] || ''}</div>
         <div class="text-xs mt-0.5">${subtext}${subtext ? badge : badge.trim()}</div>
+        ${metaText}
       `
     } else {
       div.textContent = item[this.dataset.field]

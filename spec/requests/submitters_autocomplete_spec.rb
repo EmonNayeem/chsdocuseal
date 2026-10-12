@@ -159,6 +159,24 @@ RSpec.describe 'SubmittersAutocomplete', type: :request do
 
         expect(emails).to include('contact.chs@example.com', 'contact.md@example.com', 'contact.shared@example.com')
       end
+
+      it 'includes job_title and department in directory JSON' do
+        create(
+          :recipient_contact,
+          account: account,
+          company: chs_company,
+          email: 'metadata@example.com',
+          name: 'Metadata User',
+          job_title: 'Engineer',
+          department: 'IT'
+        )
+
+        get submitters_autocomplete_index_path(field: 'email', q: 'metadata')
+        contact = response.parsed_body.find { |c| c['email'] == 'metadata@example.com' }
+
+        expect(contact['job_title']).to eq('Engineer')
+        expect(contact['department']).to eq('IT')
+      end
     end
   end
 end

@@ -17,6 +17,21 @@ RSpec.describe ReplaceEmailVariables do
     expect(result).to include('Hi John, My Template, John Doe')
   end
 
+  it 'replaces recipient metadata variables correctly' do
+    submitter.update!(
+      metadata: {
+        'recipient' => {
+          'job_title' => 'Software Engineer',
+          'department' => 'Engineering'
+        }
+      }
+    )
+    text = 'Role: {recipient.job_title}, Dept: {recipient.department}, Name: {recipient.name}, Email: {recipient.email}'
+    result = described_class.call(text, submitter: submitter)
+
+    expect(result).to include('Role: Software Engineer, Dept: Engineering, Name: John Doe, Email: john@example.com')
+  end
+
   it 'replaces indexed submitter variables correctly' do
     submitter1 = create(
       :submitter, submission: submission, name: 'Aisling King', email: 'a@example.com', uuid: SecureRandom.uuid
