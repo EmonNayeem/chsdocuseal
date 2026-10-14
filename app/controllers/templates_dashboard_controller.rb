@@ -42,6 +42,8 @@ class TemplatesDashboardController < ApplicationController
         @related_submissions_pagy, @related_submissions = load_related_submissions
       end
     end
+
+    @recent_activity_events = ActivityEvents.recent_for(current_user, limit: 8)
   end
 
   private

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_10_09_183700) do
+ActiveRecord::Schema[8.1].define(version: 2026_10_12_183500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gin"
   enable_extension "pg_catalog.plpgsql"
@@ -96,6 +96,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_183700) do
     t.bigint "blob_id", null: false
     t.string "variation_digest", null: false
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
+  create_table "activity_events", force: :cascade do |t|
+    t.bigint "account_id", null: false
+    t.string "action", null: false
+    t.string "actor_email"
+    t.string "actor_name"
+    t.bigint "actor_user_id"
+    t.bigint "company_id"
+    t.datetime "created_at", null: false
+    t.text "metadata", default: "{}", null: false
+    t.datetime "occurred_at", null: false
+    t.bigint "subject_id"
+    t.string "subject_label", null: false
+    t.string "subject_type", null: false
+    t.datetime "updated_at", null: false
+    t.string "visibility_scope", null: false
+    t.index ["account_id", "occurred_at"], name: "index_activity_events_on_account_id_and_occurred_at"
+    t.index ["account_id"], name: "index_activity_events_on_account_id"
+    t.index ["action", "occurred_at"], name: "index_activity_events_on_action_and_occurred_at"
+    t.index ["actor_user_id"], name: "index_activity_events_on_actor_user_id"
+    t.index ["company_id", "occurred_at"], name: "index_activity_events_on_company_id_and_occurred_at"
+    t.index ["company_id"], name: "index_activity_events_on_company_id"
+    t.index ["subject_type", "subject_id"], name: "index_activity_events_on_subject_type_and_subject_id"
   end
 
   create_table "companies", force: :cascade do |t|
@@ -693,6 +717,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_10_09_183700) do
   add_foreign_key "account_linked_accounts", "accounts", column: "linked_account_id"
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "activity_events", "accounts"
+  add_foreign_key "activity_events", "companies", on_delete: :nullify
+  add_foreign_key "activity_events", "users", column: "actor_user_id", on_delete: :nullify
   add_foreign_key "companies", "accounts"
   add_foreign_key "departments", "accounts"
   add_foreign_key "departments", "companies"

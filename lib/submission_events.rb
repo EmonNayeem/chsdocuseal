@@ -12,13 +12,22 @@ module SubmissionEvents
   end
 
   def create_with_tracking_data(submitter, event_type, request, data = {})
-    SubmissionEvent.create!(submitter:, event_type:, data: {
+    event = SubmissionEvent.create!(submitter:, event_type:, data: {
       ip: request.remote_ip,
       ua: request.user_agent,
       sid: request.session.id.to_s,
       uid: request.env['warden'].user(:user)&.id,
       **data
     }.compact_blank)
+
+    ActivityEvents.record_submitter_event!(
+      submitter:,
+      event_type:,
+      submission_event: event,
+      request:
+    )
+
+    event
   end
 
   def populate_account_id

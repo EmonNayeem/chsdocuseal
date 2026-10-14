@@ -3169,7 +3169,7 @@ export default {
 
         const dynamicDocumentSaves = dynamicDocumentRefs.map((ref) => ref.saveBody())
 
-        Promise.all([this.save({ force: true }), ...dynamicDocumentSaves]).then(() => {
+        Promise.all([this.save({ force: true, recordActivity: true }), ...dynamicDocumentSaves]).then(() => {
           if (this.withRevisions) {
             this.captureRevision()
           }
@@ -3403,7 +3403,7 @@ export default {
         }
       })
     },
-    save ({ force = false } = {}) {
+    save ({ force = false, recordActivity = false } = {}) {
       this.pendingFieldAttachmentUuids = []
 
       if (this.beforeRevisionSnapshot) {
@@ -3426,17 +3426,23 @@ export default {
 
       this.pushUndo()
 
+      const payload = {
+        template: {
+          name: this.template.name,
+          schema: this.template.schema,
+          submitters: this.template.submitters,
+          fields: this.template.fields,
+          variables_schema: this.template.variables_schema
+        }
+      }
+
+      if (recordActivity) {
+        payload.record_activity = true
+      }
+
       return this.baseFetch(`/templates/${this.template.id}`, {
         method: 'PUT',
-        body: JSON.stringify({
-          template: {
-            name: this.template.name,
-            schema: this.template.schema,
-            submitters: this.template.submitters,
-            fields: this.template.fields,
-            variables_schema: this.template.variables_schema
-          }
-        }),
+        body: JSON.stringify(payload),
         headers: { 'Content-Type': 'application/json' }
       }).then(() => {
         if (this.onSave) {

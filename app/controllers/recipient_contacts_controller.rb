@@ -24,6 +24,12 @@ class RecipientContactsController < ApplicationController
     @recipient_contact.company = current_user.company unless current_user.platform_admin?
 
     if @recipient_contact.save
+      ActivityEvents.record!(
+        actor: current_user,
+        action: 'recipient_contact.created',
+        subject: @recipient_contact,
+        request:
+      )
       redirect_to settings_recipient_contacts_path, notice: 'Recipient contact has been created.'
     else
       load_companies
@@ -35,7 +41,19 @@ class RecipientContactsController < ApplicationController
     assign_params = recipient_contact_params
     assign_params[:company_id] = current_user.company_id unless current_user.platform_admin?
 
-    if @recipient_contact.update(assign_params)
+    @recipient_contact.assign_attributes(assign_params)
+    changed = @recipient_contact.changed & %w[name email phone job_title department company_id]
+
+    if @recipient_contact.save
+      if changed.present?
+        ActivityEvents.record!(
+          actor: current_user,
+          action: 'recipient_contact.updated',
+          subject: @recipient_contact,
+          request:,
+          metadata: { changed_fields: changed }
+        )
+      end
       redirect_to settings_recipient_contacts_path, notice: 'Recipient contact has been updated.'
     else
       load_companies
@@ -44,7 +62,15 @@ class RecipientContactsController < ApplicationController
   end
 
   def destroy
-    @recipient_contact.destroy!
+    RecipientContact.transaction do
+      ActivityEvents.record!(
+        actor: current_user,
+        action: 'recipient_contact.deleted',
+        subject: @recipient_contact,
+        request:
+      )
+      @recipient_contact.destroy!
+    end
     redirect_to settings_recipient_contacts_path, notice: 'Recipient contact has been deleted.'
   end
 

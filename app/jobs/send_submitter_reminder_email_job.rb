@@ -102,6 +102,13 @@ class SendSubmitterReminderEmailJob
   end
 
   def record_submission_event(submitter, slot, duration_key)
+    submission_event = create_submission_event(submitter, slot, duration_key)
+    return unless submission_event
+
+    record_activity_event(submitter, submission_event, slot, duration_key)
+  end
+
+  def create_submission_event(submitter, slot, duration_key)
     SubmissionEvent.create!(
       submitter: submitter,
       event_type: 'send_reminder_email',
@@ -115,6 +122,30 @@ class SendSubmitterReminderEmailJob
       Rollbar.error(e, 'Failed to create send_reminder_email SubmissionEvent', submitter_id: submitter.id)
     else
       Rails.logger.error("Failed to create send_reminder_email SubmissionEvent: #{e.message}")
+    end
+    nil
+  end
+
+  def record_activity_event(submitter, submission_event, slot, duration_key)
+    ActivityEvents.record_submission_email!(
+      submitter:,
+      submission_event:,
+      email_type: :reminder,
+      metadata: {
+        'slot' => slot,
+        'duration' => duration_key
+      }
+    )
+  rescue StandardError => e
+    if defined?(Rollbar)
+      Rollbar.error(
+        e,
+        'Failed to create submission.reminder_email_sent ActivityEvent',
+        submitter_id: submitter.id,
+        submission_event_id: submission_event.id
+      )
+    else
+      Rails.logger.error("Failed to create submission.reminder_email_sent ActivityEvent: #{e.message}")
     end
   end
 end

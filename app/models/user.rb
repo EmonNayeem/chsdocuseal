@@ -78,6 +78,7 @@ class User < ApplicationRecord
   has_many :email_messages, dependent: :destroy, foreign_key: :author_id, inverse_of: :author
   has_many :user_departments, dependent: :destroy
   has_many :departments, through: :user_departments
+  has_many :activity_events, foreign_key: :actor_user_id, inverse_of: :actor_user, dependent: :nullify
 
   devise :two_factor_authenticatable, :recoverable, :rememberable, :validatable, :trackable, :lockable
 

@@ -205,4 +205,57 @@ RSpec.describe 'RecipientContacts', type: :request do
       expect(response).to redirect_to(root_path)
     end
   end
+
+  describe 'Activity Logging' do
+    let(:admin) do
+      create(:user, account:, company: chs_company, role: User::ADMIN_ROLE, platform_admin: true)
+    end
+
+    before { login_as(admin, scope: :user) }
+
+    it 'logs recipient_contact.created on successful creation' do
+      expect do
+        post settings_recipient_contacts_path, params: {
+          recipient_contact: { name: 'Audit Test', email: 'audit@example.com' }
+        }
+      end.to change(ActivityEvent.where(action: 'recipient_contact.created'), :count).by(1)
+
+      event = ActivityEvent.where(action: 'recipient_contact.created').last
+      expect(event.subject_label).to eq('Audit Test <audit@example.com>')
+      expect(event.actor_user_id).to eq(admin.id)
+    end
+
+    it 'does NOT log recipient_contact.created when validation fails' do
+      expect do
+        post settings_recipient_contacts_path, params: {
+          recipient_contact: { name: 'Invalid', email: 'not-an-email' }
+        }
+      end.not_to change(ActivityEvent, :count)
+    end
+
+    it 'logs recipient_contact.updated with changed_fields metadata' do
+      expect do
+        patch settings_recipient_contact_path(chs_contact), params: {
+          recipient_contact: { job_title: 'Lead Architect', department: 'R&D' }
+        }
+      end.to change(ActivityEvent.where(action: 'recipient_contact.updated'), :count).by(1)
+
+      event = ActivityEvent.where(action: 'recipient_contact.updated').last
+      expect(event.metadata['changed_fields']).to contain_exactly('job_title', 'department')
+    end
+
+    it 'logs recipient_contact.deleted and survives record deletion' do
+      contact_id = chs_contact.id
+      contact_label = "#{chs_contact.name} <#{chs_contact.email}>"
+
+      expect do
+        delete settings_recipient_contact_path(chs_contact)
+      end.to change(ActivityEvent.where(action: 'recipient_contact.deleted'), :count).by(1)
+
+      event = ActivityEvent.where(action: 'recipient_contact.deleted').last
+      expect(event.subject_id).to eq(contact_id)
+      expect(event.subject_label).to eq(contact_label)
+      expect(RecipientContact.find_by(id: contact_id)).to be_nil
+    end
+  end
 end

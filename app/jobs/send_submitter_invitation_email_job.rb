@@ -30,9 +30,32 @@ class SendSubmitterInvitationEmailJob
 
     mail.deliver_now!
 
-    SubmissionEvent.create!(submitter:, event_type: 'send_email')
+    submission_event = SubmissionEvent.create!(submitter:, event_type: 'send_email')
+
+    record_activity_event(submitter, submission_event)
 
     submitter.sent_at ||= Time.current
     submitter.save!
+  end
+
+  private
+
+  def record_activity_event(submitter, submission_event)
+    ActivityEvents.record_submission_email!(
+      submitter:,
+      submission_event:,
+      email_type: :invitation
+    )
+  rescue StandardError => e
+    if defined?(Rollbar)
+      Rollbar.error(
+        e,
+        'Failed to create submission.email_sent ActivityEvent',
+        submitter_id: submitter.id,
+        submission_event_id: submission_event.id
+      )
+    else
+      Rails.logger.error("Failed to create submission.email_sent ActivityEvent: #{e.message}")
+    end
   end
 end

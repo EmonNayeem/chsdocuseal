@@ -25,6 +25,13 @@ class TemplatesUploadsController < ApplicationController
 
     @template.update!(schema:)
 
+    ActivityEvents.record!(
+      actor: current_user,
+      action: 'template.created',
+      subject: @template,
+      request:
+    )
+
     WebhookUrls.enqueue_events(@template, 'template.created')
 
     SearchEntries.enqueue_reindex(@template)

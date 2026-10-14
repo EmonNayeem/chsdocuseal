@@ -1,0 +1,49 @@
+<% if (current_user.platform_admin? || current_user.department_acl_admin?) && @recent_activity_events.present? %>
+  <div class="card bg-base-100 shadow border border-base-300 mb-6">
+    <div class="card-body p-4 sm:p-5">
+      <div class="flex items-center justify-between mb-3 border-b border-base-200 pb-2">
+        <div class="flex items-center gap-2">
+          <%= svg_icon('logs', class: 'w-4 h-4 text-primary') if respond_to?(:svg_icon) %>
+          <h2 class="text-sm font-bold text-base-content uppercase tracking-wider">Recent Activity</h2>
+        </div>
+        <%= link_to 'View all', settings_activity_events_path, class: 'text-xs text-primary hover:underline font-medium' %>
+      </div>
+
+      <div class="space-y-3">
+        <% @recent_activity_events.each do |event| %>
+          <div class="flex items-start justify-between text-xs sm:text-sm gap-2">
+            <div class="flex items-start gap-2 min-w-0">
+              <span class="text-primary mt-0.5 select-none font-bold">•</span>
+              <div class="min-w-0">
+                <span class="font-medium text-base-content">
+                  <%= event.actor_display_name %>
+                </span>
+                <% if event.action.in?(%w[submission.email_sent submission.reminder_email_sent]) %>
+                  <span class="text-base-content/80">
+                    <%= activity_action_label(event.action).downcase %> to
+                  </span>
+                  <span class="font-medium text-base-content">
+                    <%= activity_recipient_display_name(event) %>
+                  </span>
+                  <span class="text-base-content/80">
+                    for
+                  </span>
+                <% else %>
+                  <span class="text-base-content/80">
+                    <%= activity_action_label(event.action).downcase %>
+                  </span>
+                <% end %>
+                <span class="font-medium text-base-content truncate block sm:inline">
+                  &ldquo;<%= event.subject_label %>&rdquo;
+                </span>
+              </div>
+            </div>
+            <div class="flex-shrink-0 text-xs text-base-content/60" title="<%= event.occurred_at.strftime('%d %b %Y %I:%M %p') %>">
+              <%= activity_compact_relative_time(event.occurred_at) %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+<% end %>

@@ -64,6 +64,12 @@ class TemplatesController < ApplicationController
     Template.transaction do
       @template.save!
       @template.department_ids = department_ids
+      ActivityEvents.record!(
+        actor: current_user,
+        action: 'template.created',
+        subject: @template,
+        request:
+      )
     end
 
     SearchEntries.enqueue_reindex(@template)
@@ -81,6 +87,15 @@ class TemplatesController < ApplicationController
 
     @template.save!
 
+    if params[:record_activity].in?([true, 'true', '1'])
+      ActivityEvents.record!(
+        actor: current_user,
+        action: 'template.updated',
+        subject: @template,
+        request:
+      )
+    end
+
     SearchEntries.enqueue_reindex(@template) if is_name_changed
 
     WebhookUrls.enqueue_events(@template, 'template.updated')
@@ -91,11 +106,26 @@ class TemplatesController < ApplicationController
   def destroy
     notice =
       if params[:permanently].in?(['true', true])
-        @template.destroy!
+        Template.transaction do
+          ActivityEvents.record!(
+            actor: current_user,
+            action: 'template.deleted',
+            subject: @template,
+            request:
+          )
+          @template.destroy!
+        end
 
         I18n.t('template_has_been_removed')
       else
         @template.update!(archived_at: Time.current)
+
+        ActivityEvents.record!(
+          actor: current_user,
+          action: 'template.archived',
+          subject: @template,
+          request:
+        )
 
         WebhookUrls.enqueue_events(@template, 'template.archived')
 

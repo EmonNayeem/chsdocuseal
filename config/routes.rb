@@ -199,6 +199,7 @@ Rails.application.routes.draw do
     resources :users, only: %i[index]
     resources :departments, except: %i[show]
     resources :recipient_contacts, path: 'recipients'
+    resources :activity_events, path: 'activity', only: %i[index]
     resources :companies, only: %i[index edit update]
     resources :archived_users, only: %i[index], path: 'users/:status', controller: 'users',
                                defaults: { status: :archived }

@@ -30,5 +30,7 @@ class SubmissionsDashboardController < ApplicationController
 
     ActiveRecord::Associations::Preloader.new(records: @submissions.filter_map(&:template),
                                               associations: :author).call
+
+    @recent_activity_events = ActivityEvents.recent_for(current_user, limit: 8)
   end
 end

@@ -55,7 +55,7 @@ class SubmissionsController < ApplicationController
       end
 
     WebhookUrls.enqueue_events(submissions, 'submission.created')
-
+    record_submissions_activity!(submissions)
     Submissions.send_signature_requests(submissions)
 
     SearchEntries.enqueue_reindex(submissions)
@@ -70,11 +70,26 @@ class SubmissionsController < ApplicationController
   def destroy
     notice =
       if params[:permanently].in?(['true', true])
-        @submission.destroy!
+        Submission.transaction do
+          ActivityEvents.record!(
+            actor: current_user,
+            action: 'submission.deleted',
+            subject: @submission,
+            request:
+          )
+          @submission.destroy!
+        end
 
         I18n.t('submission_has_been_removed')
       else
         @submission.update!(archived_at: Time.current)
+
+        ActivityEvents.record!(
+          actor: current_user,
+          action: 'submission.archived',
+          subject: @submission,
+          request:
+        )
 
         WebhookUrls.enqueue_events(@submission, 'submission.archived')
 
@@ -169,5 +184,20 @@ class SubmissionsController < ApplicationController
     params.delete(:body)
 
     params
+  end
+
+  def record_submissions_activity!(submissions)
+    Array(submissions).each do |sub|
+      ActivityEvents.record!(
+        actor: current_user,
+        action: 'submission.created',
+        subject: sub,
+        request:,
+        metadata: {
+          'source' => sub.source,
+          'template_id' => sub.template_id
+        }.compact
+      )
+    end
   end
 end

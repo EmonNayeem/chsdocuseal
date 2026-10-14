@@ -62,6 +62,11 @@
                       settings_recipient_contacts_path,
                       class: 'text-base hover:bg-base-300' %>
         </li>
+        <li>
+          <%= link_to 'Activity Log',
+                      settings_activity_events_path,
+                      class: 'text-base hover:bg-base-300' %>
+        </li>
       <% end %>
       <% if current_user.platform_admin? %>
         <li>

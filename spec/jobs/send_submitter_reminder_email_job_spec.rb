@@ -154,7 +154,7 @@ RSpec.describe SendSubmitterReminderEmailJob, type: :job do
       expect(SubmitterReminderDelivery.last.status).to eq('failed')
     end
 
-    it 'H. deliver_now! raises: claim becomes failed, exception re-raised' do
+    it 'H. deliver_now! raises: claim becomes failed, exception re-raised, no ActivityEvent' do
       mail_double = instance_double(ActionMailer::MessageDelivery)
       allow(SubmitterMailer).to receive(:reminder_email).and_return(mail_double)
       allow(Submitters::ValidateSending).to receive(:call)
@@ -165,12 +165,14 @@ RSpec.describe SendSubmitterReminderEmailJob, type: :job do
       end.to raise_error(StandardError, 'SMTP Error')
 
       expect(SubmitterReminderDelivery.last.status).to eq('failed')
+      expect(ActivityEvent.where(action: 'submission.reminder_email_sent')).to be_empty
     end
 
-    it 'I. successful send: claim sent, sent_at present, exactly one event with correct data' do
+    it 'I. successful send: claim sent, sent_at present, exactly one event with correct data and ActivityEvent' do
       expect do
         described_class.new.perform('submitter_id' => submitter.id, 'slot' => 'first_duration')
       end.to change(SubmissionEvent, :count).by(1)
+         .and change(ActivityEvent.where(action: 'submission.reminder_email_sent'), :count).by(1)
 
       claim = SubmitterReminderDelivery.last
       expect(claim.status).to eq('sent')
@@ -180,6 +182,18 @@ RSpec.describe SendSubmitterReminderEmailJob, type: :job do
       expect(event.event_type).to eq('send_reminder_email')
       expect(event.data['slot']).to eq('first_duration')
       expect(event.data['duration']).to eq('two_days')
+
+      activity_event = ActivityEvent.where(action: 'submission.reminder_email_sent').last
+      expect(activity_event.actor_user_id).to be_nil
+      expect(activity_event.actor_name).to eq('System')
+      expect(activity_event.actor_email).to be_nil
+      expect(activity_event.subject_type).to eq('Submission')
+      expect(activity_event.subject_id).to eq(submission.id)
+      expect(activity_event.metadata['submitter_id']).to eq(submitter.id)
+      expect(activity_event.metadata['recipient_email']).to eq('test@example.com')
+      expect(activity_event.metadata['slot']).to eq('first_duration')
+      expect(activity_event.metadata['duration']).to eq('two_days')
+      expect(activity_event.metadata['submission_event_id']).to eq(event.id)
     end
 
     it 'keeps a sent claim when audit event creation fails and does not resend' do
@@ -210,6 +224,51 @@ RSpec.describe SendSubmitterReminderEmailJob, type: :job do
         )
       else
         expect(Rails.logger).to have_received(:error).with(/Failed to create send_reminder_email SubmissionEvent/)
+      end
+
+      claim = SubmitterReminderDelivery.last
+      expect(claim.status).to eq('sent')
+      expect(claim.sent_at).to be_present
+
+      # Attempt second time, it should NOT resend
+      described_class.new.perform('submitter_id' => submitter.id, 'slot' => 'first_duration')
+      expect(SubmitterMailer).to have_received(:reminder_email).with(submitter).once
+    end
+
+    it 'keeps a sent claim and does not resend when ActivityEvents mirror raises unexpectedly' do
+      mail_double = instance_double(ActionMailer::MessageDelivery, deliver_now!: true)
+      allow(SubmitterMailer).to receive(:reminder_email).with(submitter).and_return(mail_double)
+      allow(Submitters::ValidateSending).to receive(:call).with(submitter, mail_double)
+
+      allow(ActivityEvents).to receive(:record_submission_email!).and_raise(StandardError, 'Activity Mirror Error')
+
+      if defined?(Rollbar)
+        allow(Rollbar).to receive(:error)
+      else
+        allow(Rails.logger).to receive(:error)
+      end
+
+      expect do
+        described_class.new.perform('submitter_id' => submitter.id, 'slot' => 'first_duration')
+      end.not_to raise_error
+
+      expect(SubmitterMailer).to have_received(:reminder_email).with(submitter).once
+      expect(Submitters::ValidateSending).to have_received(:call).with(submitter, mail_double).once
+
+      expect(SubmissionEvent.where(submitter_id: submitter.id, event_type: 'send_reminder_email')).to exist
+      expect(ActivityEvent.where(action: 'submission.reminder_email_sent')).to be_empty
+
+      if defined?(Rollbar)
+        expect(Rollbar).to have_received(:error).with(
+          instance_of(StandardError),
+          'Failed to create submission.reminder_email_sent ActivityEvent',
+          submitter_id: submitter.id,
+          submission_event_id: instance_of(Integer)
+        )
+      else
+        expect(Rails.logger).to have_received(:error).with(
+          /Failed to create submission.reminder_email_sent ActivityEvent/
+        )
       end
 
       claim = SubmitterReminderDelivery.last

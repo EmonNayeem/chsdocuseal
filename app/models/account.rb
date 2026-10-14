@@ -57,6 +57,7 @@ class Account < ApplicationRecord
 
   has_many :departments, dependent: :destroy
   has_many :recipient_contacts, dependent: :destroy
+  has_many :activity_events, dependent: :destroy
 
   attribute :timezone, :string, default: 'UTC'
   attribute :locale, :string, default: 'en-US'

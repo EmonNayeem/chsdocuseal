@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :submitter do
     submission
+    uuid { SecureRandom.uuid }
     email { Faker::Internet.email }
     name { Faker::Name.name }
 

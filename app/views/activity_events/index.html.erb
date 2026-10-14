@@ -1,0 +1,110 @@
+<div class="flex flex-wrap space-y-4 md:flex-nowrap md:space-y-0 md:space-x-10">
+  <%= render 'shared/settings_nav' %>
+
+  <div class="flex-grow min-w-0">
+    <div class="flex flex-col gap-2 md:flex-row md:justify-between md:items-center mb-4">
+      <h1 class="text-4xl font-bold">Activity Log</h1>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 p-4 mb-6 shadow-sm">
+      <%= form_with url: settings_activity_events_path, method: :get, class: 'flex flex-wrap items-end gap-3', data: { turbo_frame: '_top' } do |f| %>
+        <div class="form-control flex-1 min-w-[140px]">
+          <%= f.label :action_name, 'Action', class: 'label label-text text-xs font-semibold py-1' %>
+          <%= f.select :action_name, options_for_select([['All Actions', '']] + @available_actions, params[:action_name]), {}, class: 'select select-bordered select-sm w-full' %>
+        </div>
+
+        <div class="form-control flex-1 min-w-[140px]">
+          <%= f.label :actor_id, 'Actor', class: 'label label-text text-xs font-semibold py-1' %>
+          <%= f.select :actor_id, options_for_select([['All Actors', '']] + @actors, params[:actor_id]), {}, class: 'select select-bordered select-sm w-full' %>
+        </div>
+
+        <% if current_user.platform_admin? && @companies.present? %>
+          <div class="form-control flex-1 min-w-[140px]">
+            <%= f.label :company_id, 'Company', class: 'label label-text text-xs font-semibold py-1' %>
+            <%= f.select :company_id, options_for_select([['All Companies', '']] + @companies.map { |c| [c.name, c.id] }, params[:company_id]), {}, class: 'select select-bordered select-sm w-full' %>
+          </div>
+        <% end %>
+
+        <div class="form-control flex-1 min-w-[130px]">
+          <%= f.label :from_date, 'Date From', class: 'label label-text text-xs font-semibold py-1' %>
+          <%= f.date_field :from_date, value: params[:from_date], class: 'input input-bordered input-sm w-full' %>
+        </div>
+
+        <div class="form-control flex-1 min-w-[130px]">
+          <%= f.label :to_date, 'Date To', class: 'label label-text text-xs font-semibold py-1' %>
+          <%= f.date_field :to_date, value: params[:to_date], class: 'input input-bordered input-sm w-full' %>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <%= f.submit 'Filter', class: 'btn btn-primary btn-sm' %>
+          <% if params[:action_name].present? || params[:actor_id].present? || params[:company_id].present? || params[:from_date].present? || params[:to_date].present? %>
+            <%= link_to 'Clear', settings_activity_events_path, class: 'btn btn-ghost btn-sm text-xs' %>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <% if @activity_events.present? %>
+      <div class="overflow-x-auto">
+        <table class="table w-full rounded-b-none overflow-hidden">
+          <thead class="bg-base-200">
+            <tr class="text-neutral uppercase text-xs">
+              <th class="whitespace-nowrap">Timestamp</th>
+              <th>Actor</th>
+              <th>Action</th>
+              <th>Subject</th>
+              <th>Scope</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <% @activity_events.each do |event| %>
+              <tr class="hover">
+                <td class="whitespace-nowrap text-xs text-base-content/70">
+                  <div class="font-medium"><%= event.occurred_at.strftime('%d %b %y') %></div>
+                  <div><%= event.occurred_at.strftime('%I:%M %p') %></div>
+                </td>
+                <td>
+                  <div class="font-medium text-sm"><%= event.actor_display_name %></div>
+                  <% if event.actor_display_email.present? && event.actor_display_name != event.actor_display_email %>
+                    <div class="text-xs text-base-content/60"><%= event.actor_display_email %></div>
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap">
+                  <span class="badge badge-sm badge-outline font-medium"><%= activity_action_label(event.action) %></span>
+                </td>
+                <td>
+                  <div class="font-medium text-sm text-base-content"><%= event.subject_label %></div>
+                  <% meta_summary = activity_metadata_summary(event) %>
+                  <% if meta_summary.present? %>
+                    <div class="text-xs text-base-content/60 mt-0.5"><%= meta_summary %></div>
+                  <% end %>
+                </td>
+                <td class="whitespace-nowrap">
+                  <% if event.visibility_scope == 'account' %>
+                    <span class="badge badge-sm badge-info">Shared / Account</span>
+                  <% else %>
+                    <span class="badge badge-sm badge-ghost"><%= event.company&.name || 'Company' %></span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <%= render 'shared/pagination', pagy: @pagy, items_name: 'events' %>
+    <% else %>
+      <div class="text-center py-12 bg-base-100 border border-base-300 rounded-lg">
+        <div class="text-lg font-medium text-base-content/70">No activity events found</div>
+        <div class="text-sm text-base-content/50 mt-1">
+          <% if params[:action_name].present? || params[:actor_id].present? || params[:company_id].present? || params[:from_date].present? || params[:to_date].present? %>
+            Try clearing or adjusting your filters.
+          <% else %>
+            Recorded activities will appear here as team actions occur.
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+</div>
