@@ -7,6 +7,7 @@ class ActivityEventsController < ApplicationController
     ['Deleted recipient', 'recipient_contact.deleted'],
     ['Created template', 'template.created'],
     ['Updated template', 'template.updated'],
+    ['Restored template version', 'template.version_restored'],
     ['Archived template', 'template.archived'],
     ['Deleted template', 'template.deleted'],
     ['Created submission', 'submission.created'],

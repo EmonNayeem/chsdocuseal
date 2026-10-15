@@ -57,6 +57,7 @@ import BarChart from './elements/bar_chart'
 import FieldCondition from './elements/field_condition'
 import ConfirmUpload from './elements/confirm_upload'
 import UserDepartmentsForm from './elements/user_departments_form'
+import TemplateRevisionsModal from './elements/template_revisions_modal'
 import './elements/template_copy_form'
 
 import flatpickr from 'flatpickr'
@@ -156,6 +157,7 @@ safeRegisterElement('bar-chart', BarChart)
 safeRegisterElement('field-condition', FieldCondition)
 safeRegisterElement('confirm-upload', ConfirmUpload)
 safeRegisterElement('user-departments-form', UserDepartmentsForm)
+safeRegisterElement('template-revisions-modal', TemplateRevisionsModal)
 
 safeRegisterElement('template-builder', class extends HTMLElement {
   connectedCallback () {

@@ -688,7 +688,7 @@
         :revisions="revisions"
         :locale="locale"
         @close="isRevisionsModalOpen = false"
-        @apply="onRevisionApply"
+        @download-urls="downloadUrls"
       />
       <DocumentsEditorModal
         v-if="editModalDocumentUuid"
@@ -3171,10 +3171,13 @@ export default {
 
         Promise.all([this.save({ force: true, recordActivity: true }), ...dynamicDocumentSaves]).then(() => {
           if (this.withRevisions) {
-            this.captureRevision()
+            return this.captureRevision()
           }
-
+        }).then(() => {
           window.Turbo.visit(`/templates/${this.template.id}`)
+        }).catch((err) => {
+          console.error('Failed to save or capture template version:', err)
+          alert(this.t('failed_to_save_template') || 'Failed to save template')
         }).finally(() => {
           this.isSaving = false
         })
@@ -3454,6 +3457,11 @@ export default {
       return this.baseFetch(`/templates/${this.template.id}/versions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
+      }).then((resp) => {
+        if (!resp.ok) {
+          throw new Error('Version capture failed')
+        }
+        return resp
       })
     },
     onDynamicDocumentUpdate () {

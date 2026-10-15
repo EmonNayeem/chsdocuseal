@@ -119,6 +119,18 @@
 
       <% if !template.archived_at? %>
         <% if can?(:update, template) %>
+          <template-revisions-modal
+            data-template="<%= { id: template.id, name: template.name }.to_json %>"
+            data-locale="<%= I18n.locale %>"
+            class="flex-1 md:flex-none inline-flex">
+            <button type="button" class="btn btn-outline btn-sm w-full md:w-auto" id="template_version_history_button">
+              <span class="flex items-center justify-center space-x-2">
+                <%= svg_icon('rotate', class: 'w-6 h-6') %>
+                <span class="inline"><%= t('version_history', default: 'Version History') %></span>
+              </span>
+            </button>
+          </template-revisions-modal>
+
           <%= link_to edit_template_path(template), class: 'btn btn-outline btn-sm flex-1 md:flex-none' do %>
             <span class="flex items-center justify-center space-x-2">
               <%= svg_icon('pencil', class: 'w-6 h-6') %>

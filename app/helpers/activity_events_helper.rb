@@ -7,6 +7,7 @@ module ActivityEventsHelper
     'recipient_contact.deleted' => 'Deleted recipient',
     'template.created' => 'Created template',
     'template.updated' => 'Updated template',
+    'template.version_restored' => 'Restored template version',
     'template.archived' => 'Archived template',
     'template.deleted' => 'Deleted template',
     'submission.created' => 'Created submission',
@@ -45,6 +46,8 @@ module ActivityEventsHelper
       if event.action == 'submission.reminder_email_sent' && (meta['slot'].present? || meta['duration'].present?)
         parts << "Reminder: #{meta['slot'].presence || meta['duration']}"
       end
+    elsif event.action == 'template.version_restored' && meta['version_number'].present?
+      parts << "Version #{meta['version_number']}"
     else
       if meta['changed_fields'].present?
         fields = Array(meta['changed_fields']).map(&:humanize).join(', ')

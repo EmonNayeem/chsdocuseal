@@ -252,7 +252,7 @@ const en = {
   fields_selected: '{count} Fields Selected',
   field_added: '{count} Field Added',
   fields_added: '{count} Fields Added',
-  revisions: 'Revisions',
+  revisions: 'Version History',
   apply: 'Apply',
   no_revisions_yet: 'No revisions yet',
   viewing_revision_from: 'Viewing revision from {date}',
