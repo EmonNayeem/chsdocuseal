@@ -1,0 +1,41 @@
+<div class="top-0 bottom-0 left-0 right-0 absolute pointer-events-none select-none overflow-hidden" aria-hidden="true">
+  <% stroke_annots = annots.select { |a| (a['type'] || a[:type]).to_s.in?(%w[pen highlighter]) } %>
+  <% if stroke_annots.present? %>
+    <svg class="w-full h-full top-0 bottom-0 left-0 right-0 absolute overflow-visible pointer-events-none" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+      <% stroke_annots.each do |annot| %>
+        <% points = annot['points'] || annot[:points] %>
+        <% next if points.blank? || points.size < 2 %>
+        <% first = points.first %>
+        <% first_x = first['x'] || first[:x] %>
+        <% first_y = first['y'] || first[:y] %>
+        <% path_d = "M #{(first_x.to_f * 1000).round(1)} #{(first_y.to_f * 1000).round(1)} #{points.drop(1).map { |p| "L #{((p['x'] || p[:x]).to_f * 1000).round(1)} #{((p['y'] || p[:y]).to_f * 1000).round(1)}" }.join(' ')}" %>
+        <% color = annot['color'] || annot[:color] %>
+        <% width = annot['width'] || annot[:width] %>
+        <% type = annot['type'] || annot[:type] %>
+        <% opacity = annot['opacity'] || annot[:opacity] %>
+        <path
+          d="<%= path_d %>"
+          stroke="<%= color %>"
+          stroke-width="<%= (width.to_f * 1000).round(2) %>"
+          stroke-opacity="<%= type == 'highlighter' ? (opacity || 0.35) : 1 %>"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none" />
+      <% end %>
+    </svg>
+  <% end %>
+
+  <% annots.select { |a| (a['type'] || a[:type]).to_s == 'text' && (a['text'] || a[:text]).present? }.each do |annot| %>
+    <% font_pt = annot['font_size'] || annot[:font_size] || 14 %>
+    <% x = annot['x'] || annot[:x] %>
+    <% y = annot['y'] || annot[:y] %>
+    <% w = annot['w'] || annot[:w] || 0.4 %>
+    <% color = annot['color'] || annot[:color] %>
+    <% text = annot['text'] || annot[:text] %>
+    <div
+      class="absolute pointer-events-none whitespace-pre-wrap px-1 py-0.5 font-sans"
+      style="left: <%= (x.to_f * 100).round(3) %>%; top: <%= (y.to_f * 100).round(3) %>%; max-width: <%= (w.to_f * 100).round(3) %>%; color: <%= color %>; font-size: <%= ((font_pt.to_f / 612.0) * 100).round(3) %>cqw;">
+      <%= text %>
+    </div>
+  <% end %>
+</div>

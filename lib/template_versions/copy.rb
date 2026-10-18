@@ -80,6 +80,11 @@ module TemplateVersions
         end
       end
 
+      if copied.preferences.is_a?(Hash) && copied.preferences['annotations'].present?
+        copied.preferences['annotations'] =
+          TemplateAnnotations.remap_attachments(copied.preferences['annotations'], replacements)
+      end
+
       replacements
     end
 

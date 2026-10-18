@@ -247,6 +247,34 @@
             </div>
           </div>
 
+          <!-- ANNOTATIONS DIFF -->
+          <div
+            v-if="hasAnnotationDiff"
+            class="p-2.5 bg-base-100 rounded border border-base-300 space-y-1"
+          >
+            <div class="font-bold text-base-content/70">
+              Annotations
+            </div>
+            <div
+              v-if="compareData.annotations.added.length"
+              class="text-success"
+            >
+              + Added in current: {{ compareData.annotations.added.map(a => a.description).join(', ') }}
+            </div>
+            <div
+              v-if="compareData.annotations.removed.length"
+              class="text-error"
+            >
+              - Removed from version: {{ compareData.annotations.removed.map(a => a.description).join(', ') }}
+            </div>
+            <div
+              v-if="compareData.annotations.changed.length"
+              class="text-warning"
+            >
+              ~ Modified: {{ compareData.annotations.changed.map(a => `${a.description} (${a.changes.join(', ')})`).join(', ') }}
+            </div>
+          </div>
+
           <!-- PREFERENCES / SETTINGS DIFF -->
           <div
             v-if="compareData.preferences && compareData.preferences.changed"
@@ -346,6 +374,11 @@ export default {
       if (!this.compareData.fields) return false
       const { added, removed, changed } = this.compareData.fields
       return (added && added.length > 0) || (removed && removed.length > 0) || (changed && changed.length > 0)
+    },
+    hasAnnotationDiff () {
+      const annots = this.compareData?.annotations
+      if (!annots) return false
+      return (annots.added?.length > 0 || annots.removed?.length > 0 || annots.changed?.length > 0)
     }
   },
   methods: {

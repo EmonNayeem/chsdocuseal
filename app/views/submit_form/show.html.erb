@@ -129,6 +129,8 @@
           <% end %>
         </scroll-buttons>
       <% end %>
+      <% sub_annots = @submitter.submission.preferences.is_a?(Hash) ? @submitter.submission.preferences['annotations'] : nil %>
+      <% template_annots_index = (sub_annots.is_a?(Array) ? sub_annots : []).group_by { |a| [a['attachment_uuid'] || a[:attachment_uuid], (a['page'] || a[:page]).to_i] } %>
       <% schema.each do |item| %>
         <% document = @submitter.submission.schema_documents.find { |a| a.uuid == item['attachment_uuid'] } %>
         <div id="document-<%= document.uuid %>">
@@ -141,6 +143,9 @@
             <page-container class="block relative my-4 shadow-md" style="container-type: size; aspect-ratio: <%= width = page.metadata['width'] %> / <%= height = page.metadata['height'] %>">
               <img loading="lazy" src="<%= page.is_a?(ActiveStorage::Attachment) ? page.url(time: service_url_time) : page.url %>" width="<%= width %>" height="<%= height %>" alt="<%= "#{item['name']} - #{t('page')} #{index + 1}" %>">
               <div id="page-<%= [document.uuid, index].join('-') %>" class="top-0 bottom-0 left-0 right-0 absolute">
+                <% if t_annots = template_annots_index[[document.uuid, index]] %>
+                  <%= render 'submissions/template_annotations', annots: t_annots %>
+                <% end %>
                 <% if annots = document_annots_index[index] %>
                   <%= render 'submit_form/annotations', annots: %>
                 <% end %>

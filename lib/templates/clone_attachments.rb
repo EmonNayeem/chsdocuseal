@@ -20,14 +20,8 @@ module Templates
         schema_item['name'] = new_name if new_name.present?
       end
 
-      template.fields.each do |field|
-        next if field['areas'].blank?
-
-        field['areas'].each do |area|
-          new_attachment_uuid = schema_uuids_replacements[area['attachment_uuid']]
-          area['attachment_uuid'] = new_attachment_uuid if new_attachment_uuid
-        end
-      end
+      remap_fields(template, schema_uuids_replacements)
+      remap_annotations(template, schema_uuids_replacements)
 
       attachments =
         original_template.schema_documents.filter_map do |document|
@@ -79,6 +73,24 @@ module Templates
       document.preview_images_attachments.each do |preview_image|
         new_document.preview_images_attachments.new(blob_id: preview_image.blob_id)
       end
+    end
+
+    def remap_fields(template, schema_uuids_replacements)
+      template.fields.each do |field|
+        next if field['areas'].blank?
+
+        field['areas'].each do |area|
+          new_attachment_uuid = schema_uuids_replacements[area['attachment_uuid']]
+          area['attachment_uuid'] = new_attachment_uuid if new_attachment_uuid
+        end
+      end
+    end
+
+    def remap_annotations(template, schema_uuids_replacements)
+      return unless template.preferences.is_a?(Hash) && template.preferences['annotations'].present?
+
+      template.preferences['annotations'] =
+        TemplateAnnotations.remap_attachments(template.preferences['annotations'], schema_uuids_replacements)
     end
   end
 end

@@ -83,6 +83,9 @@ class TemplatesController < ApplicationController
   def update
     @template.assign_attributes(template_params)
 
+    assign_update_preferences(@template)
+    TemplateAnnotations.clean_orphaned(@template)
+
     is_name_changed = @template.name_changed?
 
     @template.save!
@@ -145,6 +148,18 @@ class TemplatesController < ApplicationController
     template.preferences = template.preferences.merge(
       'confidential_access' => confidential_access == 'true'
     )
+  end
+
+  def assign_update_preferences(template)
+    raw_prefs = params.dig(:template, :preferences)
+    return if raw_prefs.blank?
+
+    raw_prefs = raw_prefs.to_unsafe_h if raw_prefs.respond_to?(:to_unsafe_h)
+    return unless raw_prefs.key?(:annotations) || raw_prefs.key?('annotations')
+
+    raw_annots = raw_prefs[:annotations] || raw_prefs['annotations']
+    normalized = TemplateAnnotations.normalize(raw_annots)
+    template.preferences = (template.preferences || {}).merge('annotations' => normalized)
   end
 
   def template_params

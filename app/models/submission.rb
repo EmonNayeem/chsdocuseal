@@ -46,6 +46,7 @@
 #
 class Submission < ApplicationRecord
   before_validation :assign_company_from_parent, on: :create
+  before_validation :snapshot_template_annotations, on: :create
   belongs_to :template, optional: true
   belongs_to :account
   belongs_to :company
@@ -196,6 +197,18 @@ class Submission < ApplicationRecord
   end
 
   private
+
+  def snapshot_template_annotations
+    return if preferences.is_a?(Hash) && preferences.key?('annotations')
+
+    raw = template&.preferences.is_a?(Hash) ? template.preferences['annotations'] : nil
+    annots = raw.present? ? TemplateAnnotations.normalize(raw.deep_dup) : []
+
+    self.preferences = (preferences || {}).merge('annotations' => annots)
+  rescue StandardError => e
+    Rails.logger.error("Failed to snapshot template annotations: #{e.message}")
+    self.preferences = (preferences || {}).merge('annotations' => [])
+  end
 
   def assign_company_from_parent
     # rubocop:disable Style/SafeNavigationChainLength, Layout/LineLength

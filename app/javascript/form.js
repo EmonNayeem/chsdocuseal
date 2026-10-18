@@ -53,6 +53,7 @@ safeRegisterElement('submission-form', class extends HTMLElement {
       completedRedirectUrl: this.dataset.completedRedirectUrl,
       attachments: reactive(JSON.parse(this.dataset.attachments)),
       fields: JSON.parse(this.dataset.fields),
+      annotations: JSON.parse(this.dataset.annotations || '[]'),
       completeButtonContainer: document.getElementById('complete_button_container'),
       completeButtonScrollContainer: document.getElementById('complete_button_container_scroll')
     })

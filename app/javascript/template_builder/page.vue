@@ -1,7 +1,7 @@
 <template>
   <div
     class="relative select-none mb-4 before:border before:rounded before:top-0 before:bottom-0 before:left-0 before:right-0 before:absolute"
-    :class="{ 'cursor-crosshair': allowDraw && editable && !isSelectMode, 'touch-none': !!drawField }"
+    :class="{ 'cursor-crosshair': allowDraw && editable && !isSelectMode && activeAnnotationTool === 'select', 'touch-none': !!drawField }"
     style="container-type: size"
     :style="{ aspectRatio: `${width} / ${height}`}"
   >
@@ -30,6 +30,26 @@
         @move="onSelectionBoxMove"
         @contextmenu="openSelectionContextMenu"
         @close-context-menu="closeContextMenu"
+      />
+      <AnnotationLayer
+        :annotations="annotations"
+        :attachment-uuid="attachmentUuid"
+        :page="number"
+        :active-tool="activeAnnotationTool"
+        :active-color="annotationColor"
+        :pen-thickness="penThickness"
+        :highlighter-thickness="highlighterThickness"
+        :active-font-size="activeFontSize"
+        :selected-annotation-uuids="selectedAnnotationUuids"
+        :selected-annotation-uuid="selectedAnnotationUuid"
+        :editable="editable"
+        @create-annotation="$emit('create-annotation', $event)"
+        @update-annotation="$emit('update-annotation', $event)"
+        @update-annotations="$emit('update-annotations', $event)"
+        @delete-annotation="$emit('delete-annotation', $event)"
+        @select-annotation="$emit('select-annotation', $event)"
+        @select-tool="$emit('select-tool', $event)"
+        @clear-selection="$emit('clear-selection')"
       />
       <FieldArea
         v-for="(item, i) in areas"
@@ -138,6 +158,7 @@ import FieldContextMenu from './field_context_menu'
 import SelectionContextMenu from './selection_context_menu'
 import PageContextMenu from './page_context_menu'
 import SelectionBox from './selection_box'
+import AnnotationLayer from './annotation_layer'
 
 export default {
   name: 'TemplatePage',
@@ -146,7 +167,8 @@ export default {
     FieldContextMenu,
     SelectionContextMenu,
     PageContextMenu,
-    SelectionBox
+    SelectionBox,
+    AnnotationLayer
   },
   inject: ['fieldTypes', 'defaultDrawFieldType', 'fieldsDragFieldRef', 'customDragFieldRef', 'assignDropAreaSize', 'selectedAreasRef', 'template', 'isSelectModeRef', 'save'],
   props: {
@@ -260,9 +282,49 @@ export default {
       type: Boolean,
       required: false,
       default: false
+    },
+    annotations: {
+      type: Array,
+      required: false,
+      default: () => []
+    },
+    activeAnnotationTool: {
+      type: String,
+      required: false,
+      default: 'select'
+    },
+    annotationColor: {
+      type: String,
+      required: false,
+      default: '#111827'
+    },
+    penThickness: {
+      type: Number,
+      required: false,
+      default: 0.003
+    },
+    highlighterThickness: {
+      type: Number,
+      required: false,
+      default: 0.025
+    },
+    activeFontSize: {
+      type: Number,
+      required: false,
+      default: 14
+    },
+    selectedAnnotationUuids: {
+      type: Array,
+      required: false,
+      default: () => []
+    },
+    selectedAnnotationUuid: {
+      type: String,
+      required: false,
+      default: null
     }
   },
-  emits: ['draw', 'drop-field', 'remove-area', 'copy-field', 'paste-field', 'scroll-to', 'copy-selected-areas', 'delete-selected-areas', 'autodetect-fields', 'add-custom-field', 'set-draw'],
+  emits: ['draw', 'drop-field', 'remove-area', 'copy-field', 'paste-field', 'scroll-to', 'copy-selected-areas', 'delete-selected-areas', 'autodetect-fields', 'add-custom-field', 'set-draw', 'create-annotation', 'update-annotation', 'update-annotations', 'delete-annotation', 'select-annotation', 'select-tool', 'clear-selection'],
   data () {
     return {
       areaRefs: [],
@@ -586,6 +648,14 @@ export default {
     onStartDraw (e) {
       if (e.button === 2) {
         return
+      }
+
+      if (['pen', 'highlighter', 'text'].includes(this.activeAnnotationTool)) {
+        return
+      }
+
+      if (this.activeAnnotationTool === 'select' && !e.ctrlKey && !e.metaKey) {
+        this.$emit('clear-selection')
       }
 
       if (this.selectedAreasRef.value.length >= 2) {

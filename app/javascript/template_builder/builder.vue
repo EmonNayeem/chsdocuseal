@@ -370,6 +370,33 @@
         ]"
         @wheel="onPagesWheel"
       >
+        <!-- ANNOTATION TOOLBAR -->
+        <div
+          v-if="hasPdfDocuments && editable"
+          class="sticky top-1.5 z-30 flex justify-center w-full pointer-events-none mb-2"
+        >
+          <AnnotationToolbar
+            class="pointer-events-auto"
+            :active-tool="activeAnnotationTool"
+            :current-color="annotationColor"
+            :pen-thickness="penThickness"
+            :highlighter-thickness="highlighterThickness"
+            :font-size="annotationFontSize"
+            :is-text-selected="isTextAnnotationSelected"
+            :has-selection="selectedAnnotationUuids.length > 0"
+            :selection-count="selectedAnnotationUuids.length"
+            :can-undo="canUndoAnnotation"
+            :can-redo="canRedoAnnotation"
+            @select-tool="selectAnnotationTool"
+            @change-color="changeAnnotationColor"
+            @change-pen-thickness="onChangePenThickness"
+            @change-highlighter-thickness="onChangeHighlighterThickness"
+            @change-font-size="onChangeFontSize"
+            @delete-selected="deleteSelectedAnnotations"
+            @undo="undoAnnotation"
+            @redo="redoAnnotation"
+          />
+        </div>
         <div
           ref="documents"
           class="pr-3.5 pl-0.5"
@@ -448,6 +475,14 @@
                 :is-mobile="isMobile"
                 :base-url="baseUrl"
                 :with-fields-detection="withFieldsDetection"
+                :annotations="templateAnnotations"
+                :active-annotation-tool="activeAnnotationTool"
+                :annotation-color="annotationColor"
+                :pen-thickness="penThickness"
+                :highlighter-thickness="highlighterThickness"
+                :active-font-size="annotationFontSize"
+                :selected-annotation-uuids="selectedAnnotationUuids"
+                :selected-annotation-uuid="selectedAnnotationUuid"
                 @draw="[onDraw($event), withSelectedFieldType ? '' : drawFieldType = '', drawCustomField = null, showDrawField = false]"
                 @drop-field="onDropfield"
                 @remove-area="removeArea"
@@ -458,6 +493,13 @@
                 @copy-selected-areas="copySelectedAreas"
                 @delete-selected-areas="deleteSelectedAreas"
                 @autodetect-fields="detectFieldsForPage"
+                @create-annotation="onCreateAnnotation"
+                @update-annotation="onUpdateAnnotation"
+                @update-annotations="onUpdateAnnotations"
+                @delete-annotation="onDeleteAnnotation"
+                @select-annotation="onSelectAnnotation"
+                @select-tool="selectAnnotationTool"
+                @clear-selection="onClearAnnotationSelection"
               />
               <DocumentControls
                 v-if="isBreakpointLg && editable"
@@ -722,6 +764,7 @@ import MobileFields from './mobile_fields'
 import FieldSubmitter from './field_submitter'
 import RevisionsModal from './revisions_modal'
 import DocumentsEditorModal from './documents_editor_modal'
+import AnnotationToolbar from './annotation_toolbar'
 import { IconPlus, IconUsersPlus, IconDeviceFloppy, IconChevronDown, IconEye, IconWritingSign, IconInnerShadowTop, IconInfoCircle, IconAdjustments, IconDownload, IconHistory, IconX } from '@tabler/icons-vue'
 import { v4 } from 'uuid'
 import { ref, computed, toRaw, defineAsyncComponent } from 'vue'
@@ -748,6 +791,7 @@ export default {
     Fields,
     IconInfoCircle,
     MobileDrawField,
+    AnnotationToolbar,
     IconPlus,
     IconWritingSign,
     MobileFields,
@@ -1137,10 +1181,43 @@ export default {
       editModalDocumentUuid: null,
       revisions: [],
       beforeRevisionSnapshot: null,
-      zoomLevel: 1
+      zoomLevel: 1,
+      activeAnnotationTool: 'select',
+      annotationColor: '#111827',
+      selectedAnnotationUuids: [],
+      penThickness: 0.003,
+      highlighterThickness: 0.025,
+      annotationFontSize: 14,
+      annotationHistory: [],
+      annotationHistoryIndex: -1
     }
   },
   computed: {
+    hasPdfDocuments () {
+      return this.template.schema?.some((item) => !item.dynamic)
+    },
+    templateAnnotations () {
+      return this.template.preferences?.annotations || []
+    },
+    isTextAnnotationSelected () {
+      if (!this.selectedAnnotationUuids.length) return false
+      const set = new Set(this.selectedAnnotationUuids)
+      return this.templateAnnotations.some((a) => set.has(a.uuid) && a.type === 'text')
+    },
+    selectedAnnotationUuid: {
+      get () {
+        return this.selectedAnnotationUuids[0] || null
+      },
+      set (val) {
+        this.selectedAnnotationUuids = val ? [val] : []
+      }
+    },
+    canUndoAnnotation () {
+      return this.annotationHistoryIndex > 0
+    },
+    canRedoAnnotation () {
+      return this.annotationHistoryIndex < this.annotationHistory.length - 1
+    },
     submitterDefaultNames: FieldSubmitter.computed.names,
     isSelectModeRef: () => ref(false),
     isCmdKeyRef: () => ref(false),
@@ -1365,6 +1442,7 @@ export default {
   mounted () {
     this.undoStack = [JSON.stringify(this.template)]
     this.redoStack = []
+    this.ensureAnnotationHistory()
 
     this.$nextTick(() => {
       this.onWindowResize()
@@ -2064,10 +2142,14 @@ export default {
       if (e.code === 'Escape') {
         this.selectedAreasRef.value = []
         this.clearDrawField()
+        this.activeAnnotationTool = 'select'
+        this.selectedAnnotationUuids = []
       }
 
       if (this.editable && ['Backspace', 'Delete'].includes(e.key) && document.activeElement === document.body) {
-        if (this.selectedAreasRef.value.length > 1) {
+        if (this.selectedAnnotationUuids.length) {
+          this.deleteSelectedAnnotations()
+        } else if (this.selectedAreasRef.value.length > 1) {
           this.deleteSelectedAreas()
         } else if (this.selectedAreasRef.value.length) {
           this.removeArea(this.lastSelectedArea)
@@ -2090,14 +2172,22 @@ export default {
 
         this.selectedAreasRef.value = []
 
-        this.redo()
+        if (this.activeAnnotationTool !== 'select' || this.selectedAnnotationUuids.length > 0) {
+          this.redoAnnotation()
+        } else {
+          this.redo()
+        }
       } else if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
         event.stopImmediatePropagation()
         event.preventDefault()
 
         this.selectedAreasRef.value = []
 
-        this.undo()
+        if (this.activeAnnotationTool !== 'select' || this.selectedAnnotationUuids.length > 0) {
+          this.undoAnnotation()
+        } else {
+          this.undo()
+        }
       } else if ((event.ctrlKey || event.metaKey) && event.key === 'c' && document.activeElement === document.body) {
         if (this.selectedAreasRef.value.length > 1) {
           event.preventDefault()
@@ -3002,6 +3092,7 @@ export default {
         this.template.schema.splice(this.template.schema.indexOf(item), 1)
 
         this.removeAreasByAttachmentUuid(item.attachment_uuid)
+        this.removeAnnotationsByAttachmentUuid(item.attachment_uuid)
 
         this.save()
       }
@@ -3064,6 +3155,14 @@ export default {
             }
           })
         })
+
+        if (this.template.preferences?.annotations) {
+          this.template.preferences.annotations.forEach((annot) => {
+            if (annot.attachment_uuid === replaceSchemaItem.attachment_uuid) {
+              annot.attachment_uuid = schema[0].attachment_uuid
+            }
+          })
+        }
       }
 
       if (this.onUpload) {
@@ -3407,6 +3506,7 @@ export default {
       })
     },
     save ({ force = false, recordActivity = false } = {}) {
+      clearTimeout(this._saveTimeout)
       this.pendingFieldAttachmentUuids = []
 
       if (this.beforeRevisionSnapshot) {
@@ -3435,7 +3535,8 @@ export default {
           schema: this.template.schema,
           submitters: this.template.submitters,
           fields: this.template.fields,
-          variables_schema: this.template.variables_schema
+          variables_schema: this.template.variables_schema,
+          preferences: this.template.preferences
         }
       }
 
@@ -3500,6 +3601,215 @@ export default {
         }
       } else {
         this.template.variables_schema = {}
+      }
+    },
+    ensureTemplatePreferences () {
+      if (!this.template.preferences) {
+        this.template.preferences = {}
+      }
+      if (!this.template.preferences.annotations) {
+        this.template.preferences.annotations = []
+      }
+    },
+    ensureAnnotationHistory () {
+      this.ensureTemplatePreferences()
+      if (this.annotationHistory.length === 0) {
+        this.annotationHistory = [JSON.stringify(this.template.preferences.annotations)]
+        this.annotationHistoryIndex = 0
+      }
+    },
+    recordAnnotationHistory () {
+      this.ensureTemplatePreferences()
+      const current = JSON.stringify(this.template.preferences.annotations)
+      if (this.annotationHistoryIndex < this.annotationHistory.length - 1) {
+        this.annotationHistory = this.annotationHistory.slice(0, this.annotationHistoryIndex + 1)
+      }
+      if (this.annotationHistory.length === 0 || this.annotationHistory[this.annotationHistory.length - 1] !== current) {
+        this.annotationHistory.push(current)
+      }
+      this.annotationHistoryIndex = this.annotationHistory.length - 1
+    },
+    undoAnnotation () {
+      if (!this.canUndoAnnotation) return
+      this.annotationHistoryIndex--
+      this.template.preferences.annotations = JSON.parse(this.annotationHistory[this.annotationHistoryIndex])
+      this.selectedAnnotationUuids = []
+      this.debouncedSave()
+    },
+    redoAnnotation () {
+      if (!this.canRedoAnnotation) return
+      this.annotationHistoryIndex++
+      this.template.preferences.annotations = JSON.parse(this.annotationHistory[this.annotationHistoryIndex])
+      this.selectedAnnotationUuids = []
+      this.debouncedSave()
+    },
+    onCreateAnnotation (annot) {
+      this.ensureAnnotationHistory()
+      this.template.preferences.annotations.push(annot)
+      this.recordAnnotationHistory()
+      this.debouncedSave()
+    },
+    onUpdateAnnotation (annot) {
+      this.ensureAnnotationHistory()
+      const idx = this.template.preferences.annotations.findIndex((a) => a.uuid === annot.uuid)
+      if (idx !== -1) {
+        const prev = JSON.stringify(this.template.preferences.annotations[idx])
+        if (prev !== JSON.stringify(annot)) {
+          this.template.preferences.annotations.splice(idx, 1, annot)
+          this.recordAnnotationHistory()
+          this.debouncedSave()
+        }
+      }
+    },
+    onUpdateAnnotations (annots) {
+      if (!annots || !annots.length) return
+      this.ensureAnnotationHistory()
+      const map = new Map(annots.map((a) => [a.uuid, a]))
+      let changed = false
+      this.template.preferences.annotations = this.template.preferences.annotations.map((existing) => {
+        if (map.has(existing.uuid)) {
+          const updated = { ...existing, ...map.get(existing.uuid) }
+          if (JSON.stringify(existing) !== JSON.stringify(updated)) {
+            changed = true
+            return updated
+          }
+        }
+        return existing
+      })
+      if (changed) {
+        this.recordAnnotationHistory()
+        this.debouncedSave()
+      }
+    },
+    onDeleteAnnotation (uuid) {
+      this.ensureAnnotationHistory()
+      const idx = this.template.preferences.annotations.findIndex((a) => a.uuid === uuid)
+      if (idx !== -1) {
+        this.template.preferences.annotations.splice(idx, 1)
+        this.recordAnnotationHistory()
+      }
+      this.selectedAnnotationUuids = this.selectedAnnotationUuids.filter((id) => id !== uuid)
+      this.debouncedSave()
+    },
+    deleteSelectedAnnotations () {
+      if (!this.selectedAnnotationUuids.length) return
+      this.ensureAnnotationHistory()
+      const toDelete = new Set(this.selectedAnnotationUuids)
+      const prevCount = this.template.preferences.annotations.length
+      this.template.preferences.annotations = this.template.preferences.annotations.filter(
+        (a) => !toDelete.has(a.uuid)
+      )
+      if (this.template.preferences.annotations.length !== prevCount) {
+        this.recordAnnotationHistory()
+      }
+      this.selectedAnnotationUuids = []
+      this.debouncedSave()
+    },
+    deleteSelectedAnnotation () {
+      this.deleteSelectedAnnotations()
+    },
+    onSelectAnnotation (payload) {
+      const uuid = typeof payload === 'string' ? payload : payload.uuid
+      const isMulti = typeof payload === 'object' && !!payload.isMulti
+
+      if (isMulti) {
+        const idx = this.selectedAnnotationUuids.indexOf(uuid)
+        if (idx === -1) {
+          this.selectedAnnotationUuids.push(uuid)
+        } else {
+          this.selectedAnnotationUuids.splice(idx, 1)
+        }
+      } else {
+        this.selectedAnnotationUuids = [uuid]
+      }
+      this.selectedAreasRef.value = []
+    },
+    onClearAnnotationSelection () {
+      this.selectedAnnotationUuids = []
+    },
+    selectAnnotationTool (tool) {
+      this.activeAnnotationTool = tool
+      if (tool !== 'select') {
+        this.selectedAnnotationUuids = []
+      }
+    },
+    onChangePenThickness (val) {
+      this.penThickness = val
+      if (this.selectedAnnotationUuids.length && this.activeAnnotationTool === 'select') {
+        this.ensureAnnotationHistory()
+        const set = new Set(this.selectedAnnotationUuids)
+        let changed = false
+        this.templateAnnotations.forEach((annot) => {
+          if (set.has(annot.uuid) && annot.type === 'pen' && annot.width !== val) {
+            annot.width = val
+            changed = true
+          }
+        })
+        if (changed) {
+          this.recordAnnotationHistory()
+          this.debouncedSave()
+        }
+      }
+    },
+    onChangeHighlighterThickness (val) {
+      this.highlighterThickness = val
+      if (this.selectedAnnotationUuids.length && this.activeAnnotationTool === 'select') {
+        this.ensureAnnotationHistory()
+        const set = new Set(this.selectedAnnotationUuids)
+        let changed = false
+        this.templateAnnotations.forEach((annot) => {
+          if (set.has(annot.uuid) && annot.type === 'highlighter' && annot.width !== val) {
+            annot.width = val
+            changed = true
+          }
+        })
+        if (changed) {
+          this.recordAnnotationHistory()
+          this.debouncedSave()
+        }
+      }
+    },
+    onChangeFontSize (size) {
+      this.annotationFontSize = size
+      if (this.selectedAnnotationUuids.length) {
+        this.ensureAnnotationHistory()
+        const set = new Set(this.selectedAnnotationUuids)
+        let changed = false
+        this.templateAnnotations.forEach((annot) => {
+          if (set.has(annot.uuid) && annot.type === 'text' && annot.font_size !== size) {
+            annot.font_size = size
+            changed = true
+          }
+        })
+        if (changed) {
+          this.recordAnnotationHistory()
+          this.debouncedSave()
+        }
+      }
+    },
+    changeAnnotationColor (color) {
+      this.annotationColor = color
+      if (this.selectedAnnotationUuids.length) {
+        this.ensureAnnotationHistory()
+        const set = new Set(this.selectedAnnotationUuids)
+        let changed = false
+        this.templateAnnotations.forEach((annot) => {
+          if (set.has(annot.uuid) && annot.color !== color) {
+            annot.color = color
+            changed = true
+          }
+        })
+        if (changed) {
+          this.recordAnnotationHistory()
+          this.debouncedSave()
+        }
+      }
+    },
+    removeAnnotationsByAttachmentUuid (attUuid) {
+      if (this.template.preferences?.annotations) {
+        this.template.preferences.annotations = this.template.preferences.annotations.filter(
+          (a) => a.attachment_uuid !== attUuid
+        )
       }
     }
   }

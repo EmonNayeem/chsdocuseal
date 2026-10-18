@@ -105,6 +105,13 @@
                 <span class="text-[10px] mt-1">(Image preview unavailable)</span>
               </div>
 
+              <!-- ANNOTATION OVERLAYS -->
+              <AnnotationPreviewLayer
+                :annotations="payload.annotations || []"
+                :attachment-uuid="schemaItem.attachment_uuid"
+                :page="page.page"
+              />
+
               <!-- FIELD OVERLAYS -->
               <div class="absolute inset-0 pointer-events-none">
                 <div
@@ -149,6 +156,8 @@
 </template>
 
 <script>
+import AnnotationPreviewLayer from './annotation_preview_layer'
+
 const BG_COLORS = [
   'bg-red-100/80',
   'bg-sky-100/80',
@@ -190,6 +199,9 @@ const TEXT_COLORS = [
 
 export default {
   name: 'RevisionPreview',
+  components: {
+    AnnotationPreviewLayer
+  },
   props: {
     payload: {
       type: Object,

@@ -52,6 +52,7 @@ module TemplateVersions
         documents: compare_documents(v_data),
         parties: compare_parties(v_data),
         fields: compare_fields(v_data),
+        annotations: compare_annotations(v_data),
         preferences: compare_preferences(v_data),
         variables_schema: compare_variables_schema(v_data)
       }
@@ -65,6 +66,7 @@ module TemplateVersions
         schema:,
         submitters: Array.wrap(v_data['submitters']),
         fields: Array.wrap(v_data['fields']),
+        annotations: Array.wrap(v_data.dig('preferences', 'annotations')),
         documents: serialize_historical_documents(@version, schema),
         dynamic_documents: TemplateVersions.serialize_dynamic_documents(@version, v_data['dynamic_documents'].to_a)
       }
@@ -78,6 +80,7 @@ module TemplateVersions
         schema:,
         submitters: Array.wrap(@template.submitters),
         fields: Array.wrap(@template.fields),
+        annotations: Array.wrap(@template.preferences&.dig('annotations')),
         documents: serialize_current_documents(@template, schema),
         dynamic_documents: serialize_current_dynamic_documents(@template, schema)
       }
@@ -300,9 +303,62 @@ module TemplateVersions
       diff_keys
     end
 
+    def compare_annotations(v_data)
+      cur_map = Array.wrap(@template.preferences&.dig('annotations')).index_by { |a| a['uuid'] }
+      ver_map = Array.wrap(v_data.dig('preferences', 'annotations')).index_by { |a| a['uuid'] }
+      doc_names = build_doc_names_map(v_data)
+
+      added = (cur_map.keys - ver_map.keys).map { |uuid| describe_annotation(cur_map[uuid], doc_names) }
+      removed = (ver_map.keys - cur_map.keys).map { |uuid| describe_annotation(ver_map[uuid], doc_names) }
+      changed = changed_annotations(cur_map, ver_map, doc_names)
+
+      { added:, removed:, changed: }
+    end
+
+    def changed_annotations(cur_map, ver_map, doc_names)
+      (cur_map.keys & ver_map.keys).filter_map do |uuid|
+        c_a = cur_map[uuid]
+        v_a = ver_map[uuid]
+        next if c_a == v_a
+
+        diffs = annotation_diff_keys(c_a, v_a)
+        describe_annotation(v_a, doc_names).merge('changes' => diffs)
+      end
+    end
+
+    def annotation_diff_keys(c_a, v_a)
+      diffs = []
+      diffs << 'Color' if c_a['color'] != v_a['color']
+      diffs << 'Page' if c_a['page'] != v_a['page']
+      diffs << 'Text' if c_a['text'] != v_a['text']
+      diffs << 'Geometry' if c_a['points'] != v_a['points'] || c_a['x'] != v_a['x'] || c_a['y'] != v_a['y']
+      diffs
+    end
+
+    def build_doc_names_map(v_data)
+      names = {}
+      Array.wrap(@template.schema).each { |item| names[item['attachment_uuid']] = item['name'] }
+      Array.wrap(v_data['schema']).each { |item| names[item['attachment_uuid']] ||= item['name'] }
+      names
+    end
+
+    def describe_annotation(annot, doc_names)
+      doc_name = doc_names[annot['attachment_uuid']] || 'Document'
+      page_num = (annot['page'] || 0).to_i + 1
+      type_name = annot['type'].to_s.humanize
+      desc = annot['type'] == 'text' ? "\"#{annot['text'].to_s.truncate(30)}\"" : "#{type_name} stroke"
+
+      {
+        'type' => annot['type'],
+        'page' => page_num,
+        'document_name' => doc_name,
+        'description' => "#{type_name} on #{doc_name} (p. #{page_num}): #{desc}"
+      }
+    end
+
     def compare_preferences(v_data)
-      cur = @template.preferences || {}
-      ver = v_data['preferences'] || {}
+      cur = (@template.preferences || {}).except('annotations')
+      ver = (v_data['preferences'] || {}).except('annotations')
       { changed: cur != ver }
     end
 

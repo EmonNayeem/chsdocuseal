@@ -199,6 +199,9 @@ module Submissions
         end
       end
 
+      latest_submitter = find_last_submitter(submitter.submission, submitter:)
+      RenderTemplateAnnotations.call(submitter.submission, pdfs_index) if latest_submitter.blank?
+
       fill_submitter_fields(submitter, submitter.account, pdfs_index, with_signature_id:, is_flatten:,
                                                                       with_submitter_timezone:,
                                                                       with_file_links:,

@@ -28,6 +28,14 @@
       :image="image"
       :attachment-uuid="document.uuid"
       :with-fields-detection="withFieldsDetection"
+      :annotations="annotations"
+      :active-annotation-tool="activeAnnotationTool"
+      :annotation-color="annotationColor"
+      :pen-thickness="penThickness"
+      :highlighter-thickness="highlighterThickness"
+      :active-font-size="activeFontSize"
+      :selected-annotation-uuids="selectedAnnotationUuids"
+      :selected-annotation-uuid="selectedAnnotationUuid"
       @drop-field="$emit('drop-field', { ...$event, attachment_uuid: document.uuid })"
       @remove-area="$emit('remove-area', $event)"
       @copy-field="$emit('copy-field', $event)"
@@ -37,6 +45,13 @@
       @copy-selected-areas="$emit('copy-selected-areas')"
       @delete-selected-areas="$emit('delete-selected-areas')"
       @autodetect-fields="$emit('autodetect-fields', $event)"
+      @create-annotation="$emit('create-annotation', $event)"
+      @update-annotation="$emit('update-annotation', $event)"
+      @update-annotations="$emit('update-annotations', $event)"
+      @delete-annotation="$emit('delete-annotation', $event)"
+      @select-annotation="$emit('select-annotation', $event)"
+      @select-tool="$emit('select-tool', $event)"
+      @clear-selection="$emit('clear-selection')"
       @scroll-to="scrollToArea"
       @draw="$emit('draw', { area: {...$event.area, attachment_uuid: document.uuid }, isTooSmall: $event.isTooSmall })"
     />
@@ -159,9 +174,49 @@ export default {
       type: Boolean,
       required: false,
       default: false
+    },
+    annotations: {
+      type: Array,
+      required: false,
+      default: () => []
+    },
+    activeAnnotationTool: {
+      type: String,
+      required: false,
+      default: 'select'
+    },
+    annotationColor: {
+      type: String,
+      required: false,
+      default: '#111827'
+    },
+    penThickness: {
+      type: Number,
+      required: false,
+      default: 0.003
+    },
+    highlighterThickness: {
+      type: Number,
+      required: false,
+      default: 0.025
+    },
+    activeFontSize: {
+      type: Number,
+      required: false,
+      default: 14
+    },
+    selectedAnnotationUuids: {
+      type: Array,
+      required: false,
+      default: () => []
+    },
+    selectedAnnotationUuid: {
+      type: String,
+      required: false,
+      default: null
     }
   },
-  emits: ['draw', 'drop-field', 'remove-area', 'paste-field', 'copy-field', 'copy-selected-areas', 'delete-selected-areas', 'autodetect-fields', 'add-custom-field', 'set-draw'],
+  emits: ['draw', 'drop-field', 'remove-area', 'paste-field', 'copy-field', 'copy-selected-areas', 'delete-selected-areas', 'autodetect-fields', 'add-custom-field', 'set-draw', 'create-annotation', 'update-annotation', 'update-annotations', 'delete-annotation', 'select-annotation', 'select-tool', 'clear-selection'],
   data () {
     return {
       pageRefs: []

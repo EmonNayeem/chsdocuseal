@@ -17,6 +17,9 @@ module Submissions
 
         set_submission_preferences = submission_preferences.slice('send_email', 'bcc_completed')
         set_submission_preferences['send_email'] = true if params['send_completed_email']
+        raw_annots = template&.preferences.is_a?(Hash) ? template.preferences['annotations'] : nil
+        set_submission_preferences['annotations'] =
+          raw_annots.present? ? TemplateAnnotations.normalize(raw_annots.deep_dup) : []
         expire_at = attrs[:expire_at] || Templates.build_default_expire_at(template)
 
         submission = template.submissions.new(

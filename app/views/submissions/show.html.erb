@@ -117,6 +117,8 @@
         <% attachments_index = ActiveStorage::Attachment.where(record: @submission.submitters, name: :attachments).preload(:blob).index_by(&:uuid) %>
         <% page_blob_struct = Struct.new(:url, :metadata) %>
         <% bg_classes = %w[bg-red-100 bg-sky-100 bg-emerald-100 bg-yellow-100 bg-purple-100 bg-pink-100 bg-cyan-100 bg-orange-100 bg-lime-100 bg-indigo-100] %>
+        <% sub_annots = @submission.preferences.is_a?(Hash) ? @submission.preferences['annotations'] : nil %>
+        <% template_annots_index = (sub_annots.is_a?(Array) ? sub_annots : []).group_by { |a| [a['attachment_uuid'] || a[:attachment_uuid], (a['page'] || a[:page]).to_i] } %>
         <% schema.each do |item| %>
           <% document = @submission.schema_documents.find { |e| e.uuid == item['attachment_uuid'] } %>
           <% document_annots_index = document.metadata.dig('pdf', 'annotations')&.group_by { |e| e['page'] } || {} %>
@@ -127,6 +129,9 @@
             <page-container id="<%= "page-#{document.uuid}-#{index}" %>" class="block before:border before:absolute before:top-0 before:bottom-0 before:left-0 before:right-0 before:rounded relative mb-4" style="container-type: size; aspect-ratio: <%= width = page.metadata['width'] %> / <%= height = page.metadata['height'] %>">
               <img loading="lazy" src="<%= page.is_a?(ActiveStorage::Attachment) ? page.url(time: service_url_time) : page.url %>" width="<%= width %>" class="rounded" height="<%= height %>" alt="<%= "#{item['name']} - #{t('page')} #{index + 1}" %>">
               <div class="top-0 bottom-0 left-0 right-0 absolute">
+                <% if t_annots = template_annots_index[[document.uuid, index]] %>
+                  <%= render 'submissions/template_annotations', annots: t_annots %>
+                <% end %>
                 <% document_annots_index[index]&.each do |annot| %>
                   <%= render 'submissions/annotation', annot: %>
                 <% end %>
