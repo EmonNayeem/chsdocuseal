@@ -1,2 +1,1 @@
-<%= t('powered_by') %>
-<a href="<%= Docuseal::PRODUCT_URL %>" target="_blank" rel="noopener"><%= Docuseal.product_name %></a>
+<a href="<%= root_url(Docuseal.default_url_options) %>" target="_blank" rel="noopener" class="underline"><%= Docuseal.product_name %></a> &middot; <%= t('powered_by') %> <a href="<%= Docuseal::PRODUCT_URL %>" target="_blank" rel="noopener" class="underline">DocuSeal</a>

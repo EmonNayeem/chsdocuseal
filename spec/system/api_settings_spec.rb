@@ -36,4 +36,9 @@ RSpec.describe 'API Settings' do
 
     expect(page).to have_content('Wrong password')
   end
+
+  it 'does not show external legacy API reference button' do
+    expect(page).to have_no_link('Open Full API Reference')
+    expect(page).to have_no_link(href: 'https://www.docuseal.com/docs/api')
+  end
 end

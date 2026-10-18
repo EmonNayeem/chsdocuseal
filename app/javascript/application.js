@@ -320,6 +320,7 @@ document.addEventListener('turbo:frame-load', () => {
 
 const applyChsTheme = (theme) => {
   document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('edc-theme', theme)
   localStorage.setItem('chs-docuseal-theme', theme)
 
   document.querySelectorAll('[data-theme-toggle-icon]').forEach((icon) => {
@@ -328,7 +329,7 @@ const applyChsTheme = (theme) => {
 }
 
 const initializeChsThemeToggle = () => {
-  const savedTheme = localStorage.getItem('chs-docuseal-theme') || 'chs'
+  const savedTheme = localStorage.getItem('edc-theme') || localStorage.getItem('chs-docuseal-theme') || 'chs'
 
   applyChsTheme(savedTheme)
 
@@ -350,7 +351,7 @@ document.addEventListener('turbo:load', initializeChsThemeToggle)
 document.addEventListener('turbo:frame-load', initializeChsThemeToggle)
 document.addEventListener('DOMContentLoaded', initializeChsThemeToggle)
 
-// CHS DocuSeal: show/hide password buttons for all password fields
+// eDocument Centre: show/hide password buttons for all password fields
 const passwordEyeIcon = `
   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
     <path d="M2 12s3.5-7 10-7s10 7 10 7s-3.5 7-10 7s-10-7-10-7z"></path>
@@ -418,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 })
 
-// CHS DocuSeal: dashboard template live search dropdown
+// eDocument Centre: dashboard template live search dropdown
 let templateSearchTimer = null
 
 const hideTemplateSearchResults = (resultsBox) => {
@@ -517,7 +518,7 @@ document.addEventListener('turbo:load', initializeTemplateLiveSearch)
 document.addEventListener('turbo:frame-load', initializeTemplateLiveSearch)
 document.addEventListener('DOMContentLoaded', initializeTemplateLiveSearch)
 
-// CHS DocuSeal: consistent custom date picker for all date fields
+// eDocument Centre: consistent custom date picker for all date fields
 const initializeChsDatePickers = () => {
   document.querySelectorAll('input[type="date"]:not([data-chs-date-picker-ready])').forEach((input) => {
     input.dataset.chsDatePickerReady = 'true'

@@ -156,7 +156,7 @@ button[disabled] .enabled, button.btn-disabled .enabled {
   font-family: "Courier New", Consolas, "Liberation Mono", monospace, ui-monospace, SFMono-Regular, Menlo, Monaco;
 }
 
-/* CHS DocuSeal template editor branding */
+/* eDocument Centre template editor branding */
 template-builder.chs-template-builder-page {
   display: block;
   min-height: 100vh;
@@ -400,7 +400,7 @@ html[data-theme='chs-dark'] table thead th span {
   color: #F2FAFE !important;
 }
 
-/* CHS DocuSeal password visibility toggle */
+/* eDocument Centre password visibility toggle */
 .password-toggle-wrapper {
   position: relative;
   width: 100%;
@@ -449,7 +449,7 @@ html[data-theme='chs-dark'] .password-toggle-button:hover {
   color: #FFFFFF;
 }
 
-/* CHS DocuSeal custom date picker */
+/* eDocument Centre custom date picker */
 .flatpickr-calendar {
   border-radius: 1rem !important;
   border: 1px solid #BFD3E2 !important;
@@ -540,7 +540,7 @@ html[data-theme='chs-dark'] .submissions-dashboard-filters .border-neutral-300 {
   border-color: #6EA8C7 !important;
 }
 
-/* CHS DocuSeal: submissions list desktop column layout */
+/* eDocument Centre: submissions list desktop column layout */
 @media (min-width: 768px) {
   .submission-row-content {
     min-width: 0;
@@ -582,7 +582,7 @@ html[data-theme='chs-dark'] .submissions-dashboard-filters .border-neutral-300 {
   }
 }
 
-/* CHS DocuSeal: submissions list table-style header */
+/* eDocument Centre: submissions list table-style header */
 .submissions-list-header {
   box-shadow: none;
 }

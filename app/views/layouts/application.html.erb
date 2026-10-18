@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script>
       (() => {
-        const savedTheme = localStorage.getItem('chs-docuseal-theme')
+        const savedTheme = localStorage.getItem('edc-theme') || localStorage.getItem('chs-docuseal-theme')
         const theme = savedTheme || 'chs'
 
         document.documentElement.setAttribute('data-theme', theme)

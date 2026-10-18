@@ -1,1 +1,15 @@
-<%= render 'logo_placeholder' %>
+<div class="alert my-4">
+  <%= svg_icon('info_circle', class: 'w-6 h-6') %>
+  <div>
+    <p class="font-bold">
+      <%= t('company_logo') %>
+    </p>
+    <p class="text-sm">
+      <%= t('company_branding_configured_in_companies', default: 'Company logos and branding are configured per company in Company Settings.') %>
+      <% if current_user.platform_admin? %>
+        <br>
+        <%= link_to 'Manage Companies', settings_companies_path, class: 'link font-medium' %>
+      <% end %>
+    </p>
+  </div>
+</div>
