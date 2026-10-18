@@ -25,7 +25,9 @@ RSpec.describe 'Legacy External Links and Attribution', type: :request do
   end
 
   describe 'GET / (Logged-out Landing Page)' do
-    let!(:user) { create(:user) }
+    before do
+      create(:user)
+    end
 
     it 'renders homepage with environment-aware eDC link and distinct upstream DocuSeal attribution' do
       get root_path
@@ -41,12 +43,17 @@ RSpec.describe 'Legacy External Links and Attribution', type: :request do
 
       # Legally required upstream DocuSeal attribution is retained and clearly distinguished
       expect(response.body).to include(I18n.t('powered_by'))
-      expect(response.body).to include("<a href=\"#{Docuseal::PRODUCT_URL}\" class=\"underline\" target=\"_blank\" rel=\"noopener\">DocuSeal</a>")
+      expected_docuseal_link =
+        "<a href=\"#{Docuseal::PRODUCT_URL}\" class=\"underline\" target=\"_blank\" rel=\"noopener\">DocuSeal</a>"
+      expect(response.body).to include(expected_docuseal_link)
       expect(response.body).to include(I18n.t('open_source_documents_software'))
 
       # Open Source card acknowledges AGPLv3 and upstream DocuSeal without promotional marketing text
       expect(response.body).to include('AGPLv3')
-      expect(response.body).to include("<a href=\"#{Docuseal::GITHUB_URL}\" class=\"link link-neutral font-bold\" target=\"_blank\" rel=\"noopener\">DocuSeal</a>")
+      expected_github_link =
+        "<a href=\"#{Docuseal::GITHUB_URL}\" " \
+        'class="link link-neutral font-bold" target="_blank" rel="noopener">DocuSeal</a>'
+      expect(response.body).to include(expected_github_link)
       expect(response.body).not_to include('Open-source contributors are always ready to help!')
     end
   end
